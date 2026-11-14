@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIM-PUNCHLIST | Sistem Monitoring Punch List Masa Pemeliharaan</title>
+  <!-- Bootstrap 4 & FontAwesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ==================== HALAMAN 1: LOGIN & RBAC ==================== -->
+  <div id="loginView" class="login-wrapper">
+    <div class="login-card row no-gutters">
+      <div class="col-lg-5 login-brand-side d-flex flex-column justify-content-between">
+        <div>
+          <span class="badge badge-info px-2 py-1 mb-2">CAPSTONE DESIGN — KELOMPOK 4</span>
+          <h2 class="font-weight-bold text-white mb-2">SIM-PUNCHLIST</h2>
+          <p class="text-light small mb-4">Sistem Monitoring Punch List Berbasis Web untuk Mengurangi Keterlambatan Penyelesaian Masa Pemeliharaan Proyek Konstruksi.</p>
+          <hr class="border-secondary" />
+          <ul class="list-unstyled small text-light mt-3">
+            <li class="mb-2"><i class="fas fa-check-circle text-info mr-2"></i>Single Source of Truth Basis Data</li>
+            <li class="mb-2"><i class="fas fa-check-circle text-info mr-2"></i>Sinkronisasi Real-Time Lintas Jaringan</li>
+            <li class="mb-2"><i class="fas fa-check-circle text-info mr-2"></i>Early Warning Otomatis (&le; 5 Bulan)</li>
+            <li class="mb-2"><i class="fas fa-check-circle text-info mr-2"></i>Validasi Foto Before–After (Poka-Yoke)</li>
+            <li class="mb-2"><i class="fas fa-check-circle text-info mr-2"></i>Ekspor Berita Acara FHO (PDF & Excel)</li>
+          </ul>
+        </div>
+        <div class="small text-muted mt-4">Teknik Industri — Universitas Pamulang (2026)</div>
+      </div>
+
+      <div class="col-lg-7 p-4 p-md-5 bg-white">
+        <h4 class="font-weight-bold mb-1">Masuk ke Sistem</h4>
+        <p class="text-muted small mb-4">Pilih peran pengguna untuk mengakses sesi kerja sesuai hak akses (RBAC).</p>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label class="font-weight-bold small">Peran Pengguna (Role)</label>
+            <select id="loginRole" class="form-control">
+              <option value="mgmt">Manajemen Kontraktor Utama (Administrator & Pengawas Mutu)</option>
+              <option value="pic">Tim Pemeliharaan Lapangan (PIC Eksekutor)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="picSelectGroup" style="display:none;">
+            <label class="font-weight-bold small">Pilih Nama Personel PIC Lapangan</label>
+            <select id="loginPicName" class="form-control">
+              <option value="ALL">Semua PIC (Tampilan Supervisi Lapangan)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="font-weight-bold small">Email / Identitas Akun</label>
+            <input type="text" id="loginEmail" class="form-control" value="manajemen.proyek@kontraktor.co.id" required />
+          </div>
+
+          <div class="form-group">
+            <label class="font-weight-bold small">Kata Sandi</label>
+            <input type="password" id="loginPass" class="form-control" value="12345678" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block font-weight-bold py-2 mt-3">
+            <i class="fas fa-sign-in-alt mr-1"></i> MASUK KE DASHBOARD MONITORING
+          </button>
+        </form>
+
+        <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap">
+          <small class="text-muted" id="loginSyncStatus"><span class="sync-dot sync-local"></span>Mode Lokal (Siap Dihubungkan ke Firebase)</small>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#cloudConfigModal">
+            <i class="fas fa-cloud mr-1"></i> Atur Cloud Sync
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HALAMAN 2: APLIKASI UTAMA ==================== -->
+  <div id="appView" class="app-shell" style="display:none;">
+    <!-- Sidebar -->
+    <aside class="sidebar no-print" id="sidebarMenu">
+      <div class="brand-box">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="h5 font-weight-bold text-info mb-0">SIM-PUNCHLIST</span>
+          <button class="btn btn-sm text-light d-lg-none" id="closeSidebarBtn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="small text-muted mt-1" id="sidebarUserRole">Manajemen Kontraktor</div>
+      </div>
+
+      <nav class="mt-3">
+        <a class="nav-link active" data-tab="tabDashboard"><i class="fas fa-tachometer-alt"></i> Dashboard Utama</a>
+        <a class="nav-link" data-tab="tabList"><i class="fas fa-tasks"></i> Daftar Punch List <span class="badge badge-light ml-auto" id="navCountBadge">15</span></a>
+        <a class="nav-link mgmt-only" data-tab="tabAdd"><i class="fas fa-plus-circle"></i> Input Temuan Baru</a>
+        <a class="nav-link" data-tab="tabLogs"><i class="fas fa-history"></i> Log Audit Progres</a>
+        <a class="nav-link" data-tab="tabReport"><i class="fas fa-file-export"></i> Laporan Akhir (FHO)</a>
+      </nav>
+
+      <div class="p-3 mt-4">
+        <div class="p-3 rounded" style="background:#1e293b;">
+          <div class="small font-weight-bold text-white mb-1">Masa Pemeliharaan</div>
+          <div class="small text-info">Durasi Kontrak: 5 Bulan</div>
+          <div class="small text-muted mt-1">Target: 100% Tuntas Sebelum FHO</div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline-danger btn-sm btn-block mt-3">
+          <i class="fas fa-sign-out-alt mr-1"></i> Keluar / Ganti Peran
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Area -->
+    <div class="main-content">
+      <!-- Topbar -->
+      <header class="topbar no-print">
+        <div class="d-flex align-items-center">
+          <button class="btn btn-outline-secondary btn-sm mr-3 d-lg-none" id="openSidebarBtn">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div>
+            <h5 class="font-weight-bold mb-0" id="pageTitle">Dashboard Monitoring Punch List</h5>
+            <small class="text-muted">Proyek Konstruksi Infrastruktur Elektrikal & Penerangan — Kontrak Pemeliharaan 5 Bulan</small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+          <span id="topbarSyncBadge" class="badge badge-warning px-3 py-2">
+            <span class="sync-dot sync-local"></span>Lokal Browser (Offline/Single Device)
+          </span>
+          <button class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#cloudConfigModal">
+            <i class="fas fa-cloud"></i> Cloud Sync Real-Time
+          </button>
+          <button class="btn btn-sm btn-outline-secondary mgmt-only" id="resetDemoBtn" title="Kembalikan ke 15 data studi kasus awal">
+            <i class="fas fa-undo"></i> Reset Data
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Container -->
+      <div class="container-fluid p-4">
+
+        <!-- TAB 1: DASHBOARD UTAMA -->
+        <section id="tabDashboard" class="app-tab">
+          <!-- KPI Row -->
+          <div class="row">
+            <div class="col-sm-6 col-xl-3 mb-3">
+              <div class="kpi-card kpi-blue">
+                <div class="small font-weight-bold text-primary">TOTAL PUNCH LIST</div>
+                <div class="h2 font-weight-bold my-1" id="kpiTotal">15</div>
+                <div class="small text-muted">Seluruh catatan perbaikan terdaftar</div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-xl-3 mb-3">
+              <div class="kpi-card kpi-amber">
+                <div class="small font-weight-bold text-warning">OPEN / IN PROGRESS / PENDING</div>
+                <div class="h2 font-weight-bold my-1" id="kpiActive">0</div>
+                <div class="small text-muted">Dalam proses eksekusi lapangan</div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-xl-3 mb-3">
+              <div class="kpi-card kpi-red">
+                <div class="small font-weight-bold text-danger">EARLY WARNING (KRITIS / OVERDUE)</div>
+                <div class="h2 font-weight-bold my-1" id="kpiWarning">0</div>
+                <div class="small text-muted">Perlu prioritas sebelum bulan ke-5</div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-xl-3 mb-3">
+              <div class="kpi-card kpi-green">
+                <div class="small font-weight-bold text-success">VERIFIED / CLOSED</div>
+                <div class="h2 font-weight-bold my-1" id="kpiVerified">0</div>
+                <div class="small text-muted" id="kpiVerifiedPct">0% tuntas terverifikasi</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress & Early Warning Panels -->
+          <div class="row">
+            <div class="col-lg-7 mb-4">
+              <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white font-weight-bold">
+                  <i class="fas fa-chart-bar text-primary mr-2"></i>Progres Penyelesaian Berdasarkan Kategori Kerusakan
+                </div>
+                <div class="card-body" id="categoryProgressContainer"></div>
+              </div>
+            </div>
+
+            <div class="col-lg-5 mb-4">
+              <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white font-weight-bold text-danger">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>Panel Early Warning System Aktif
+                </div>
+                <div class="card-body" id="earlyWarningPanel" style="max-height:280px; overflow-y:auto;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Monitoring Table -->
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap">
+              <span class="font-weight-bold"><i class="fas fa-list-ul text-primary mr-2"></i>Pemantauan Real-Time Daftar Punch List</span>
+              <button class="btn btn-sm btn-primary mgmt-only" onclick="switchTab('tabAdd')">
+                <i class="fas fa-plus mr-1"></i> Tambah Item Baru
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0 small">
+                <thead class="thead-dark">
+                  <tr>
+                    <th>Tiket</th>
+                    <th>Judul & Deskripsi Teknis</th>
+                    <th>PIC Lapangan</th>
+                    <th>Tenggat</th>
+                    <th>Early Warning</th>
+                    <th>Status</th>
+                    <th>Foto Bukti</th>
+                    <th class="text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: DAFTAR PUNCH LIST LENGKAP & FILTER -->
+        <section id="tabList" class="app-tab" style="display:none;">
+          <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4 mb-2">
+                  <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cari nomor tiket, judul kerusakan, atau PIC..." />
+                </div>
+                <div class="col-md-3 mb-2">
+                  <select id="filterStatus" class="form-control form-control-sm">
+                    <option value="ALL">Semua Status</option>
+                    <option value="Open">Open (Belum Dikerjakan)</option>
+                    <option value="In Progress">In Progress (Sedang Dikerjakan)</option>
+                    <option value="Pending">Pending (Tertunda)</option>
+                    <option value="Completed">Completed (Menunggu Verifikasi)</option>
+                    <option value="Verified/Closed">Verified/Closed (Tuntas)</option>
+                  </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                  <select id="filterPic" class="form-control form-control-sm">
+                    <option value="ALL">Semua PIC Lapangan</option>
+                  </select>
+                </div>
+                <div class="col-md-2 mb-2">
+                  <button class="btn btn-sm btn-outline-secondary btn-block" id="clearFilterBtn">Reset Filter</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover mb-0 small">
+                <thead class="thead-light">
+                  <tr>
+                    <th>No. Tiket</th>
+                    <th>Judul Catatan</th>
+                    <th>Deskripsi Perbaikan</th>
+                    <th>PIC</th>
+                    <th>Tgl Temuan</th>
+                    <th>Tenggat</th>
+                    <th>Early Warning</th>
+                    <th>Status</th>
+                    <th class="text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="fullListTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: INPUT TEMUAN BARU (MANAJEMEN) -->
+        <section id="tabAdd" class="app-tab" style="display:none;">
+          <div class="card shadow-sm border-0" style="max-width:780px;">
+            <div class="card-header bg-primary text-white font-weight-bold">
+              <i class="fas fa-plus-circle mr-2"></i>Formulir Pencatatan Item Punch List Baru (Manajemen Kontraktor Utama)
+            </div>
+            <div class="card-body">
+              <form id="addPunchForm">
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label class="font-weight-bold small">Nomor Tiket</label>
+                    <input type="text" id="newTicket" class="form-control" readonly />
+                  </div>
+                  <div class="form-group col-md-8">
+                    <label class="font-weight-bold small">Judul Catatan Kerusakan</label>
+                    <input type="text" id="newTitle" class="form-control" placeholder="Contoh: Konekting Kabel Rusak / Kabel BC Trafo" required />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="font-weight-bold small">Deskripsi Teknis & Lokasi Perbaikan</label>
+                  <textarea id="newDesc" class="form-control" rows="3" placeholder="Jelaskan detail perbaikan teknis yang harus dilakukan oleh PIC lapangan..." required></textarea>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label class="font-weight-bold small">Penanggung Jawab (PIC)</label>
+                    <input type="text" id="newPic" class="form-control" placeholder="Nama PIC Lapangan" required />
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label class="font-weight-bold small">Tanggal Temuan</label>
+                    <input type="date" id="newFoundDate" class="form-control" required />
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label class="font-weight-bold small">Batas Tenggat (Sebelum Bln ke-5)</label>
+                    <input type="date" id="newDueDate" class="form-control" required />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="font-weight-bold small">Unggah Foto Kondisi Awal (Before) — Opsional saat input</label>
+                  <input type="file" id="newBeforePhoto" class="form-control-file" accept="image/*" />
+                  <small class="text-muted">Gambar akan otomatis dikompresi agar ringan saat sinkronisasi real-time.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary font-weight-bold">
+                  <i class="fas fa-save mr-1"></i> Simpan & Tugaskan ke PIC Lapangan
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: LOG AUDIT PROGRES -->
+        <section id="tabLogs" class="app-tab" style="display:none;">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white font-weight-bold">
+              <i class="fas fa-history text-primary mr-2"></i>Jejak Audit Perubahan Status (Progress Logs — Real-Time)
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-striped small">
+                  <thead>
+                    <tr>
+                      <th>Waktu (Timestamp)</th>
+                      <th>Tiket</th>
+                      <th>Aktor Pengguna</th>
+                      <th>Perubahan Status</th>
+                      <th>Catatan Lapangan / Verifikasi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="auditLogTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5: LAPORAN AKHIR FHO (EXPORT PDF & EXCEL) -->
+        <section id="tabReport" class="app-tab" style="display:none;">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap no-print">
+              <span class="font-weight-bold"><i class="fas fa-file-contract text-success mr-2"></i>Berita Acara Penyelesaian Punch List (Final Hand Over / FHO)</span>
+              <div>
+                <button class="btn btn-sm btn-success mr-2" id="exportExcelBtn">
+                  <i class="fas fa-file-excel mr-1"></i> Ekspor Excel (.XLSX)
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="window.print()">
+                  <i class="fas fa-file-pdf mr-1"></i> Cetak / Simpan PDF
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="text-center mb-4">
+                <h5 class="font-weight-bold mb-1">REKAPITULASI PENYELESAIAN PUNCH LIST MASA PEMELIHARAAN</h5>
+                <div class="small text-muted">Proyek Konstruksi — Periode Masa Pemeliharaan 5 Bulan | Dicetak melalui SIM-PUNCHLIST</div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-bordered table-sm small">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>No</th>
+                      <th>Tiket</th>
+                      <th>Judul Catatan</th>
+                      <th>Deskripsi Perbaikan</th>
+                      <th>PIC</th>
+                      <th>Tgl Temuan</th>
+                      <th>Tgl Selesai</th>
+                      <th>Status Akhir</th>
+                      <th>Bukti Foto</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reportTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: UPDATE PROGRES & VERIFIKASI FOTO ==================== -->
+  <div class="modal fade" id="itemDetailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h6 class="modal-title font-weight-bold" id="modalItemTitle">Detail & Pembaruan Item Punch List</h6>
+          <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editItemId" />
+          <div class="alert alert-light border small mb-3" id="modalItemMeta"></div>
+
+          <!-- Side-by-Side Photo Comparison -->
+          <div class="row mb-3">
+            <div class="col-md-6 mb-2">
+              <label class="font-weight-bold small text-danger"><i class="fas fa-camera mr-1"></i>FOTO SEBELUM PERBAIKAN (BEFORE)</label>
+              <div class="photo-box" id="beforePhotoBox">
+                <span class="text-muted small">Belum ada foto Before</span>
+              </div>
+              <input type="file" id="uploadBeforeInput" class="form-control-file form-control-sm mt-2" accept="image/*" />
+            </div>
+
+            <div class="col-md-6 mb-2">
+              <label class="font-weight-bold small text-success"><i class="fas fa-camera mr-1"></i>FOTO SESUDAH PERBAIKAN (AFTER — WAJIB)</label>
+              <div class="photo-box" id="afterPhotoBox">
+                <span class="text-muted small">Belum ada foto After</span>
+              </div>
+              <input type="file" id="uploadAfterInput" class="form-control-file form-control-sm mt-2" accept="image/*" />
+            </div>
+          </div>
+
+          <div id="pokaYokeAlert" class="alert alert-danger small py-2" style="display:none;">
+            <i class="fas fa-shield-alt mr-1"></i> <strong>Validasi Poka-Yoke:</strong> Sistem menolak perubahan status menjadi <b>Completed</b> sebelum Foto Sesudah Perbaikan (After) diunggah!
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-5">
+              <label class="font-weight-bold small">Status Pekerjaan</label>
+              <select id="editItemStatus" class="form-control form-control-sm">
+                <option value="Open">Open (Belum Dikerjakan)</option>
+                <option value="In Progress">In Progress (Sedang Dikerjakan)</option>
+                <option value="Pending">Pending (Tertunda / Kendala)</option>
+                <option value="Completed">Completed (Selesai Dikerjakan PIC)</option>
+                <option value="Verified/Closed" class="mgmt-option">Verified/Closed (Disetujui Manajemen)</option>
+              </select>
+            </div>
+            <div class="form-group col-md-7">
+              <label class="font-weight-bold small">Catatan Pelaksanaan / Kendala / Verifikasi</label>
+              <input type="text" id="editItemRemarks" class="form-control form-control-sm" placeholder="Tuliskan progres lapangan atau catatan pemeriksaan..." />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-sm btn-outline-danger mgmt-only" id="deleteItemBtn">
+            <i class="fas fa-trash mr-1"></i> Hapus Item
+          </button>
+          <div>
+            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Tutup</button>
+            <button type="button" class="btn btn-sm btn-success font-weight-bold" id="saveItemChangesBtn">
+              <i class="fas fa-check-circle mr-1"></i> Simpan Perubahan Real-Time
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: PENGATURAN CLOUD SYNC (FIREBASE) ==================== -->
+  <div class="modal fade" id="cloudConfigModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h6 class="modal-title font-weight-bold"><i class="fas fa-cloud mr-2"></i>Koneksi Real-Time Lintas Jaringan (Firebase)</h6>
+          <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body small">
+          <p>Untuk mengaktifkan sinkronisasi <strong>real-time antar HP (4G/5G) dan Laptop (WiFi)</strong> pada GitHub Pages, masukkan URL Firebase Realtime Database Anda:</p>
+          <div class="form-group">
+            <label class="font-weight-bold">Firebase Realtime Database URL</label>
+            <input type="url" id="firebaseDbUrlInput" class="form-control form-control-sm" placeholder="https://nama-proyek-default-rtdb.asia-southeast1.firebasedatabase.app" />
+          </div>
+          <div class="alert alert-info mb-0">
+            <strong>Tips Cepat:</strong> Buat database gratis di <code>console.firebase.google.com</code> -> pilih <em>Realtime Database</em> -> pilih <em>Start in test mode</em> -> salin URL-nya ke kolom di atas.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="disconnectCloudBtn">Gunakan Mode Lokal</button>
+          <button type="button" class="btn btn-sm btn-primary font-weight-bold" id="saveCloudConfigBtn">Simpan & Hubungkan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts: jQuery, Bootstrap, SheetJS (Excel Export), Firebase Compat SDK -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
