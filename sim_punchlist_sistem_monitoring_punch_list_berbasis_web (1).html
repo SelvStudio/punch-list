@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIM-PUNCHLIST — Sistem Monitoring Punch List Berbasis Web</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Firebase App & Realtime Database Compat SDKs (Cross-Network Real-Time Sync) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: #1e293b;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Print / PDF Report Styling */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 11px !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      #app-shell, #main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .report-card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+      }
+      table.report-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: auto;
+      }
+      table.report-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      table.report-table th,
+      table.report-table td {
+        border: 1px solid #334155 !important;
+        padding: 5px 6px !important;
+        vertical-align: middle !important;
+      }
+      table.report-table th {
+        background-color: #1e3a8a !important;
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none no-print"></div>
+
+  <!-- =====================================================================
+       1. HALAMAN LOGIN (TAMPILAN PERTAMA SAAT DIBUKA)
+  ====================================================================== -->
+  <section id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
+    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 border border-slate-700/40">
+
+      <!-- Left Branding Panel -->
+      <div class="lg:col-span-5 bg-gradient-to-b from-[#0f172a] to-[#1e3a8a] text-white p-8 flex flex-col justify-between">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold mb-6">
+            <i class="fa-solid fa-helmet-safety"></i>
+            <span>CAPSTONE DESIGN — KELOMPOK 4</span>
+          </div>
+
+          <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">
+            SIM-PUNCHLIST
+          </h1>
+          <p class="text-blue-200 text-sm font-medium leading-relaxed mb-6">
+            Sistem Monitoring Punch List Berbasis Web untuk Mengurangi Keterlambatan Penyelesaian Masa Pemeliharaan Proyek Konstruksi (5 Bulan)
+          </p>
+
+          <div class="space-y-3 text-xs text-slate-200 border-t border-white/15 pt-5">
+            <div class="flex items-start gap-2.5">
+              <i class="fa-solid fa-circle-check text-emerald-400 mt-0.5"></i>
+              <span><strong>Single Source of Truth:</strong> Sinkronisasi basis data terpusat lintas jaringan secara real-time.</span>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <i class="fa-solid fa-bell text-amber-400 mt-0.5"></i>
+              <span><strong>Early Warning System:</strong> Deteksi otomatis tenggat (Hijau, Kuning, Oranye, Merah) sebelum bulan ke-5 berakhir.</span>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <i class="fa-solid fa-camera text-sky-400 mt-0.5"></i>
+              <span><strong>Validasi Poka-Yoke Before-After:</strong> Bukti foto wajib sebelum verifikasi penutupan (Verified/Closed).</span>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <i class="fa-solid fa-users-gear text-purple-400 mt-0.5"></i>
+              <span><strong>Kontrol Akses RBAC & Manajemen User:</strong> Manajemen Kontraktor Utama & Tim Pemeliharaan Lapangan (PIC).</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-white/15 text-[11px] text-blue-200/80">
+          <p class="font-semibold text-white">Program Studi Teknik Industri — Universitas Pamulang</p>
+          <p>Kelas 08TIDE001 • Tangerang Selatan • 2026</p>
+        </div>
+      </div>
+
+      <!-- Right Login Form Panel -->
+      <div class="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center bg-white">
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-800">Masuk ke Sistem</h2>
+            <p class="text-sm text-slate-500">Silakan masuk menggunakan akun terdaftar atau pilih profil uji cepat.</p>
+          </div>
+          <span id="login-sync-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Siap Sinkronisasi</span>
+          </span>
+        </div>
+
+        <form id="login-form" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Email / Username</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                <i class="fa-solid fa-user"></i>
+              </span>
+              <input id="login-identifier" type="text" required placeholder="Contoh: admin@kontraktor.co.id atau anton"
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Kata Sandi (Password)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                <i class="fa-solid fa-lock"></i>
+              </span>
+              <input id="login-password" type="password" required placeholder="Masukkan kata sandi"
+                class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition" />
+              <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                <i id="pwd-eye-icon" class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div id="login-error-box" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="login-error-text">Email/Username atau kata sandi salah.</span>
+          </div>
+
+          <button type="submit" class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>LOGIN KE DASHBOARD</span>
+          </button>
+        </form>
+
+        <!-- Quick Demo Login Selector (Manajemen vs PIC Lapangan) -->
+        <div class="mt-6 pt-5 border-t border-slate-200">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+            Akses Cepat Demo (Klik untuk Masuk Otomatis):
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button type="button" onclick="quickLogin('admin@kontraktor.co.id')"
+              class="p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-left transition flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-user-tie"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-blue-900 truncate">Manajemen Kontraktor</p>
+                <p class="text-[11px] text-blue-700 truncate">Fajar Sidiq (Akses Penuh)</p>
+              </div>
+            </button>
+
+            <button type="button" onclick="quickLogin('anton@lapangan.co.id')"
+              class="p-2.5 rounded-xl border border-teal-200 bg-teal-50/70 hover:bg-teal-100 text-left transition flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-hard-hat"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-teal-900 truncate">PIC Lapangan: Anton</p>
+                <p class="text-[11px] text-teal-700 truncate">Update Progres & Foto</p>
+              </div>
+            </button>
+
+            <button type="button" onclick="quickLogin('adul@lapangan.co.id')"
+              class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-lg bg-slate-700 text-white text-xs font-bold flex items-center justify-center shrink-0">AD</span>
+              <div class="min-w-0">
+                <p class="text-xs font-semibold text-slate-800 truncate">PIC: Adul</p>
+                <p class="text-[10px] text-slate-500 truncate">Tim Pemeliharaan</p>
+              </div>
+            </button>
+
+            <button type="button" onclick="quickLogin('budi@lapangan.co.id')"
+              class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-left transition flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-lg bg-slate-700 text-white text-xs font-bold flex items-center justify-center shrink-0">BD</span>
+              <div class="min-w-0">
+                <p class="text-xs font-semibold text-slate-800 truncate">PIC: Budi / Ali</p>
+                <p class="text-[10px] text-slate-500 truncate">Tim Pemeliharaan</p>
+              </div>
+            </button>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <button type="button" onclick="openModal('cloud-modal')" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1.5">
+              <i class="fa-solid fa-cloud"></i>
+              <span>Konfigurasi Firebase Realtime DB</span>
+            </button>
+            <button type="button" onclick="openModal('github-modal')" class="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1.5">
+              <i class="fa-brands fa-github"></i>
+              <span>Panduan Deploy GitHub Pages</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       2. APLIKASI UTAMA (ADMINLTE-STYLE RESPONSIVE SHELL)
+  ====================================================================== -->
+  <div id="app-shell" class="hidden min-h-screen flex flex-col lg:flex-row">
+
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="sidebar-backdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-slate-900/60 z-30 hidden lg:hidden no-print"></div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-[#0f172a] text-slate-200 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out shrink-0 no-print">
+      <!-- Brand Header -->
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white flex items-center justify-center font-extrabold text-lg shadow-md">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <div>
+            <h1 class="font-extrabold text-white tracking-wide text-base leading-tight">SIM-PUNCHLIST</h1>
+            <p class="text-[11px] text-blue-400 font-medium">Kelompok 4 • UNPAM</p>
+          </div>
+        </div>
+        <button onclick="toggleMobileSidebar(false)" class="lg:hidden text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Current User Profile Card -->
+      <div class="p-4 mx-3 mt-4 rounded-xl bg-slate-800/80 border border-slate-700/60">
+        <div class="flex items-center gap-3">
+          <div id="sidebar-avatar" class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shrink-0">
+            FS
+          </div>
+          <div class="min-w-0">
+            <p id="sidebar-user-name" class="text-sm font-bold text-white truncate">Fajar Sidiq</p>
+            <span id="sidebar-user-role" class="inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/20">
+              Manajemen Utama
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+        <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition bg-blue-600 text-white">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-gauge-high w-4 text-center"></i>
+            <span>Dashboard Utama</span>
+          </span>
+        </button>
+
+        <button onclick="switchTab('punchlists')" data-tab="punchlists" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-list-check w-4 text-center"></i>
+            <span>Data Punch List</span>
+          </span>
+          <span id="nav-badge-total" class="px-2 py-0.5 text-xs rounded-full bg-slate-700 text-slate-200 font-semibold">15</span>
+        </button>
+
+        <button onclick="switchTab('early-warning')" data-tab="early-warning" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-triangle-exclamation w-4 text-center text-amber-400"></i>
+            <span>Early Warning</span>
+          </span>
+          <span id="nav-badge-warning" class="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">0</span>
+        </button>
+
+        <button onclick="switchTab('reports')" data-tab="reports" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-file-image w-4 text-center text-emerald-400"></i>
+            <span>Laporan Bergambar</span>
+          </span>
+        </button>
+
+        <button onclick="switchTab('users')" data-tab="users" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+          <span class="flex items-center gap-3">
+            <i class="fa-solid fa-users-cog w-4 text-center text-sky-400"></i>
+            <span>Kelola Pengguna</span>
+          </span>
+          <span id="nav-badge-users" class="px-2 py-0.5 text-xs rounded-full bg-slate-700 text-slate-200 font-semibold">10</span>
+        </button>
+      </nav>
+
+      <!-- Bottom Tools & Logout -->
+      <div class="p-3 border-t border-slate-800 space-y-1.5">
+        <button onclick="openModal('cloud-modal')" class="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition">
+          <i class="fa-solid fa-cloud text-blue-400 w-4 text-center"></i>
+          <span>Sinkronisasi Cloud / RTDB</span>
+        </button>
+        <button onclick="openModal('github-modal')" class="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition">
+          <i class="fa-brands fa-github text-slate-300 w-4 text-center"></i>
+          <span>Deploy GitHub Pages</span>
+        </button>
+        <button onclick="logout()" class="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10 transition">
+          <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+          <span>Keluar (Logout)</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT WORKSPACE -->
+    <div id="main-content" class="flex-1 flex flex-col min-w-0">
+
+      <!-- TOP NAVBAR -->
+      <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-20 no-print">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleMobileSidebar(true)" class="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100">
+            <i class="fa-solid fa-bars text-lg"></i>
+          </button>
+          <div>
+            <h2 id="page-title" class="text-lg sm:text-xl font-bold text-slate-800">Dashboard Monitoring Utama</h2>
+            <p class="text-xs text-slate-500 hidden sm:block">Masa Pemeliharaan Proyek Konstruksi (Kontrak 5 Bulan • Kontrol Sebelum Bulan ke-6)</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Realtime Cloud Status Indicator -->
+          <button onclick="openModal('cloud-modal')" id="sync-status-pill"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">
+            <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="sync-label">Realtime Cloud Aktif</span>
+          </button>
+
+          <!-- Quick Add Button (Visible for Manajemen) -->
+          <button id="btn-header-add" onclick="openPunchModal()"
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">
+            <i class="fa-solid fa-plus"></i>
+            <span class="hidden sm:inline">Input Temuan</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENT VIEWS -->
+      <main class="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- ===============================================================
+             TAB 1: DASHBOARD MONITORING UTAMA
+        ================================================================ -->
+        <div id="view-dashboard" class="space-y-6">
+
+          <!-- Early Warning Banner -->
+          <div id="dashboard-ew-banner" class="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+            <div class="flex items-start sm:items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <i class="fa-solid fa-bell text-lg"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-amber-950">SISTEM PERINGATAN DINI (EARLY WARNING) — MASA PEMELIHARAAN BULAN KE-5</h3>
+                <p id="dashboard-ew-text" class="text-xs text-amber-800 mt-0.5">
+                  Memantau seluruh 15 item punch list agar tuntas sebelum akhir masa kontrak bulan ke-5 (mencegah komplain owner di bulan ke-6).
+                </p>
+              </div>
+            </div>
+            <button onclick="switchTab('early-warning')" class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shrink-0 transition">
+              Lihat Detail Peringatan
+            </button>
+          </div>
+
+          <!-- 4 KPI CARDS -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <!-- Total Punch List -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-blue-600">Total Punch List</p>
+                <p id="kpi-total" class="text-3xl font-extrabold text-slate-800 mt-1">15</p>
+                <p class="text-xs text-slate-500 mt-1">Seluruh item terdaftar terpusat</p>
+              </div>
+              <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-clipboard-list"></i>
+              </div>
+            </div>
+
+            <!-- Open / In Progress / Pending -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Open / In Progress</p>
+                <p id="kpi-active" class="text-3xl font-extrabold text-slate-800 mt-1">0</p>
+                <p id="kpi-active-sub" class="text-xs text-slate-500 mt-1">Dalam pengerjaan tim lapangan</p>
+              </div>
+              <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+              </div>
+            </div>
+
+            <!-- Early Warning / Overdue -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-red-600">Early Warning / Kritis</p>
+                <p id="kpi-warning" class="text-3xl font-extrabold text-slate-800 mt-1">0</p>
+                <p class="text-xs text-slate-500 mt-1">Mendekati tenggat / belum closed</p>
+              </div>
+              <div class="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+              </div>
+            </div>
+
+            <!-- Verified / Closed -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Verified / Closed</p>
+                <p id="kpi-verified" class="text-3xl font-extrabold text-slate-800 mt-1">15</p>
+                <p id="kpi-verified-pct" class="text-xs text-emerald-600 font-semibold mt-1">100% Tuntas Terverifikasi</p>
+              </div>
+              <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROGRESS BY DAMAGE CATEGORY & ACTIVE NOTIFICATIONS -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Category Breakdown (7 cols) -->
+            <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-bold text-slate-800">Progres Penyelesaian Berdasarkan Kategori Kerusakan</h3>
+                  <p class="text-xs text-slate-500">Rekapitulasi temuan studi kasus masa pemeliharaan proyek konstruksi</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">Real-Time</span>
+              </div>
+              <div id="category-progress-container" class="space-y-4"></div>
+            </div>
+
+            <!-- PIC Workload & Performance (5 cols) -->
+            <div class="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-bold text-slate-800">Distribusi Penugasan PIC Lapangan</h3>
+                  <p class="text-xs text-slate-500">Akuntabilitas penyelesaian per teknisi pelaksana</p>
+                </div>
+              </div>
+              <div id="pic-summary-container" class="space-y-3"></div>
+            </div>
+          </div>
+
+          <!-- REALTIME MONITORING TABLE PREVIEW -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-base font-bold text-slate-800">Tabel Pemantauan Status Real-Time Punch List</h3>
+                <p class="text-xs text-slate-500">Klik baris atau tombol aksi untuk memperbarui status, mengunggah foto Before/After, atau verifikasi.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="switchTab('reports')" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition">
+                  <i class="fa-solid fa-print mr-1"></i> Laporan Bergambar
+                </button>
+                <button onclick="switchTab('punchlists')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-xs font-semibold text-white transition">
+                  Kelola Semua Data
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-800 text-white text-xs uppercase tracking-wider">
+                    <th class="py-3 px-4">No. Tiket</th>
+                    <th class="py-3 px-4">Judul Catatan</th>
+                    <th class="py-3 px-4">Nama PIC</th>
+                    <th class="py-3 px-4">Tgl Temuan / Selesai</th>
+                    <th class="py-3 px-4">Early Warning</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4">Dokumentasi</th>
+                    <th class="py-3 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===============================================================
+             TAB 2: DATA PUNCH LIST (CRUD + POKA-YOKE + FOTO UPLOAD)
+        ================================================================ -->
+        <div id="view-punchlists" class="hidden space-y-5">
+          <!-- Filter & Search Bar -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+              <div class="relative flex-1 max-w-md">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input id="filter-search" type="text" oninput="renderAll()" placeholder="Cari nomor tiket, judul kerusakan, deskripsi, atau PIC..."
+                  class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+              </div>
+
+              <select id="filter-status" onchange="renderAll()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <option value="ALL">Semua Status</option>
+                <option value="Open">Open (Belum Dikerjakan)</option>
+                <option value="In Progress">In Progress (Sedang Dikerjakan)</option>
+                <option value="Pending">Pending (Tertunda)</option>
+                <option value="Completed">Completed (Menunggu Verifikasi)</option>
+                <option value="Verified/Closed">Verified/Closed (Tuntas)</option>
+              </select>
+
+              <select id="filter-pic" onchange="renderAll()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <option value="ALL">Semua PIC</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="resetDefaultDataset()" class="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition" title="Muat ulang 15 data asli dari laporan">
+                <i class="fa-solid fa-rotate-left mr-1"></i> Reset 15 Data Studi Kasus
+              </button>
+              <button id="btn-tab-add" onclick="openPunchModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">
+                <i class="fa-solid fa-plus mr-1"></i> Tambah Item
+              </button>
+            </div>
+          </div>
+
+          <!-- Full Punch List Table -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-800 text-white text-xs uppercase tracking-wider">
+                    <th class="py-3 px-4">No</th>
+                    <th class="py-3 px-4">Judul Catatan</th>
+                    <th class="py-3 px-4 min-w-[240px]">Deskripsi Perbaikan</th>
+                    <th class="py-3 px-4">Nama PIC</th>
+                    <th class="py-3 px-4">Tgl Temuan</th>
+                    <th class="py-3 px-4">Foto Before</th>
+                    <th class="py-3 px-4">Tgl Selesai / Target</th>
+                    <th class="py-3 px-4">Foto After</th>
+                    <th class="py-3 px-4">Status & Warning</th>
+                    <th class="py-3 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="full-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===============================================================
+             TAB 3: EARLY WARNING SYSTEM & KONTROL TENGGAT 5 BULAN
+        ================================================================ -->
+        <div id="view-early-warning" class="hidden space-y-6">
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800">Mesin Peringatan Dini (Early Warning System)</h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Formula Kontrol Jadwal: <code class="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-mono">Δt = T_due - T_now</code> • Ambang batas akhir kontrak pemeliharaan: <strong>5 Bulan</strong>.
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 text-xs">
+                <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Hijau: Aman (&gt;14 Hari / Verified)</span>
+                <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">Kuning: H-14 s.d. H-4</span>
+                <span class="px-2.5 py-1 rounded-full bg-orange-100 text-orange-800 font-semibold">Oranye: Kritis (≤3 Hari)</span>
+                <span class="px-2.5 py-1 rounded-full bg-red-100 text-red-800 font-semibold">Merah: Overdue (&lt;0 Hari)</span>
+              </div>
+            </div>
+
+            <div id="ew-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5"></div>
+          </div>
+        </div>
+
+        <!-- ===============================================================
+             TAB 4: LAPORAN & REKAPITULASI BERGAMBAR (FORMAT BAB I & FHO)
+        ================================================================ -->
+        <div id="view-reports" class="hidden space-y-5">
+          <!-- Report Action Toolbar -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3 no-print">
+            <div>
+              <h3 class="text-base font-bold text-slate-800">Laporan Rekapitulasi Punch List & Dokumentasi Visual (Before–After)</h3>
+              <p class="text-xs text-slate-500">Sesuai format data Latar Belakang & Berita Acara Serah Terima Akhir Proyek (Final Hand Over / FHO).</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="report-filter-status" onchange="renderReportTable()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium bg-white">
+                <option value="ALL">Semua Item (15 Data)</option>
+                <option value="Verified/Closed">Hanya Verified / Closed</option>
+                <option value="UNFINISHED">Belum Verified / Closed</option>
+              </select>
+              <button onclick="exportToCSV()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition inline-flex items-center gap-1.5">
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Ekspor Excel (.CSV)</span>
+              </button>
+              <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition inline-flex items-center gap-1.5">
+                <i class="fa-solid fa-print"></i>
+                <span>Cetak / Simpan PDF Bergambar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Printable Report Sheet -->
+          <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm report-card">
+            <!-- Official Header -->
+            <div class="border-b-2 border-slate-800 pb-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-widest text-blue-700">LAPORAN MONITORING & VERIFIKASI MASA PEMELIHARAAN PROYEK</p>
+                <h2 class="text-xl font-extrabold text-slate-900 mt-0.5">DAFTAR CATATAN PERBAIKAN (PUNCH LIST) & DOKUMENTASI FOTO</h2>
+                <p class="text-xs text-slate-600 mt-1">
+                  Disusun oleh: <strong>Kelompok 4 (08TIDE001)</strong> • Program Studi Teknik Industri, Fakultas Teknik, Universitas Pamulang
+                </p>
+              </div>
+              <div class="text-left sm:text-right text-xs text-slate-600 space-y-0.5 shrink-0">
+                <p><strong>Durasi Kontrak Pemeliharaan:</strong> 5 Bulan</p>
+                <p><strong>Tanggal Cetak:</strong> <span id="report-print-date">21 November 2026</span></p>
+                <p><strong>Status Capaian:</strong> <span id="report-summary-badge" class="font-bold text-emerald-700">15/15 Item</span></p>
+              </div>
+            </div>
+
+            <!-- Illustrated Table Matching Bab I -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse report-table text-xs">
+                <thead>
+                  <tr class="bg-slate-800 text-white">
+                    <th class="py-2.5 px-3 border border-slate-700 text-center w-10">NO</th>
+                    <th class="py-2.5 px-3 border border-slate-700 w-36">Judul Catatan</th>
+                    <th class="py-2.5 px-3 border border-slate-700">Deskripsi Perbaikan</th>
+                    <th class="py-2.5 px-3 border border-slate-700 w-24">Nama PIC</th>
+                    <th class="py-2.5 px-3 border border-slate-700 w-28">Tanggal Temuan</th>
+                    <th class="py-2.5 px-3 border border-slate-700 text-center w-32">Dokumentasi (Before)</th>
+                    <th class="py-2.5 px-3 border border-slate-700 w-28">Tanggal Selesai</th>
+                    <th class="py-2.5 px-3 border border-slate-700 text-center w-32">Dokumentasi (After)</th>
+                    <th class="py-2.5 px-3 border border-slate-700 text-center w-28">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="report-table-body" class="divide-y divide-slate-300"></tbody>
+              </table>
+            </div>
+
+            <!-- Signature Block for Print/PDF -->
+            <div class="mt-8 pt-6 grid grid-cols-2 sm:grid-cols-3 gap-6 text-center text-xs text-slate-700">
+              <div>
+                <p class="font-semibold">Dibuat & Diperiksa Oleh,</p>
+                <p class="text-slate-500">Manajemen Kontraktor Utama</p>
+                <div class="h-16"></div>
+                <p class="font-bold underline">Fajar Sidiq Al-Hayyu</p>
+                <p class="text-[11px] text-slate-500">Ketua Kelompok 4 • NIM 221010850008</p>
+              </div>
+              <div>
+                <p class="font-semibold">Pelaksana Lapangan,</p>
+                <p class="text-slate-500">Koordinator Tim Pemeliharaan (PIC)</p>
+                <div class="h-16"></div>
+                <p class="font-bold underline">Anton / Tim Pemeliharaan</p>
+                <p class="text-[11px] text-slate-500">Divisi Elektrikal & Grounding</p>
+              </div>
+              <div class="col-span-2 sm:col-span-1">
+                <p class="font-semibold">Mengetahui,</p>
+                <p class="text-slate-500">Dosen Pengampu Perancangan Sistem Terpadu</p>
+                <div class="h-16"></div>
+                <p class="font-bold underline">Mohammad Shobur, S.T., M.T.</p>
+                <p class="text-[11px] text-slate-500">NIDN. 04 270889 03</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===============================================================
+             TAB 5: MANAJEMEN PENGGUNA (EDITABLE USERS REAL-TIME)
+        ================================================================ -->
+        <div id="view-users" class="hidden space-y-5">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-800">Manajemen Akun Pengguna & Hak Akses (RBAC)</h3>
+              <p class="text-xs text-slate-500">Tambah, ubah profil/kata sandi, atau atur peran pengguna (Manajemen Kontraktor Utama vs Tim Pemeliharaan Lapangan). Perubahan langsung tersinkronisasi.</p>
+            </div>
+            <button onclick="openUserModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition inline-flex items-center gap-2 shrink-0">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>Tambah Pengguna Baru</span>
+            </button>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-800 text-white text-xs uppercase tracking-wider">
+                    <th class="py-3 px-4">Nama Pengguna</th>
+                    <th class="py-3 px-4">Email / Username</th>
+                    <th class="py-3 px-4">Peran (Role RBAC)</th>
+                    <th class="py-3 px-4">Jabatan / Keterangan</th>
+                    <th class="py-3 px-4">Password</th>
+                    <th class="py-3 px-4 text-right">Aksi Edit</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 1: TAMBAH / EDIT PUNCH LIST & UPLOAD FOTO BEFORE-AFTER
+  ====================================================================== -->
+  <div id="punch-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden my-8 border border-slate-200">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <h3 id="punch-modal-title" class="text-base font-bold">Form Pencatatan & Pembaruan Punch List</h3>
+          <p id="punch-modal-subtitle" class="text-xs text-slate-300">Validasi Poka-Yoke: Status Completed wajib melampirkan Foto Sesudah Perbaikan (After).</p>
+        </div>
+        <button onclick="closeModal('punch-modal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="punch-form" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto">
+        <input type="hidden" id="pm-id" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Tiket</label>
+            <input id="pm-ticket" type="text" required readonly class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-700" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Penanggung Jawab (PIC)</label>
+            <select id="pm-pic" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-blue-600"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Prioritas Pekerjaan</label>
+            <select id="pm-priority" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-blue-600">
+              <option value="High">High (Tinggi)</option>
+              <option value="Medium">Medium (Sedang)</option>
+              <option value="Low">Low (Rendah)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Judul Catatan Kerusakan</label>
+          <input id="pm-title" type="text" required placeholder="Contoh: Konekting Kabel Rusak / Kabel BC Belum Di Couple Ke Trafo"
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Deskripsi Teknis & Tindakan Perbaikan</label>
+          <textarea id="pm-desc" rows="2" required placeholder="Jelaskan detail temuan kerusakan dan spesifikasi perbaikan teknis..."
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Temuan</label>
+            <input id="pm-found-date" type="date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Target Tenggat (Due Date)</label>
+            <input id="pm-due-date" type="date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Selesai Aktual</label>
+            <input id="pm-completed-date" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+
+        <!-- Status & Pending Reason -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Status Siklus Pekerjaan</label>
+            <select id="pm-status" onchange="handleStatusSelectChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:ring-2 focus:ring-blue-600">
+              <option value="Open">Open (Belum Dikerjakan)</option>
+              <option value="In Progress">In Progress (Sedang Dikerjakan)</option>
+              <option value="Pending">Pending (Tertunda)</option>
+              <option value="Completed">Completed (Selesai - Ajukan Verifikasi)</option>
+              <option value="Verified/Closed">Verified/Closed (Disetujui Manajemen)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan Lapangan / Alasan Pending</label>
+            <input id="pm-remarks" type="text" placeholder="Opsional (Wajib diisi jika status Pending)"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white" />
+          </div>
+        </div>
+
+        <!-- Photo Documentation Upload (Before & After) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Foto Before -->
+          <div class="p-3.5 rounded-xl border border-amber-200 bg-amber-50/40">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-amber-900">1. Dokumentasi SEBELUM (Before)</span>
+              <button type="button" onclick="clearPhoto('before')" class="text-[11px] text-red-600 hover:underline">Hapus Foto</button>
+            </div>
+            <div class="h-36 rounded-xl bg-white border border-dashed border-amber-300 flex items-center justify-center overflow-hidden mb-2 relative">
+              <img id="preview-before" src="" alt="Preview Before" class="hidden w-full h-full object-cover" />
+              <div id="placeholder-before" class="text-center p-3 text-slate-400">
+                <i class="fa-solid fa-image text-2xl mb-1"></i>
+                <p class="text-[11px]">Belum ada foto kondisi awal</p>
+              </div>
+            </div>
+            <label class="block w-full text-center py-1.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold cursor-pointer transition">
+              <i class="fa-solid fa-camera mr-1"></i> Unggah / Ambil Foto Before
+              <input type="file" accept="image/*" class="hidden" onchange="handlePhotoUpload(event, 'before')" />
+            </label>
+          </div>
+
+          <!-- Foto After -->
+          <div class="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-900">2. Dokumentasi SESUDAH (After) *</span>
+              <button type="button" onclick="clearPhoto('after')" class="text-[11px] text-red-600 hover:underline">Hapus Foto</button>
+            </div>
+            <div class="h-36 rounded-xl bg-white border border-dashed border-emerald-300 flex items-center justify-center overflow-hidden mb-2 relative">
+              <img id="preview-after" src="" alt="Preview After" class="hidden w-full h-full object-cover" />
+              <div id="placeholder-after" class="text-center p-3 text-slate-400">
+                <i class="fa-solid fa-camera-retro text-2xl mb-1"></i>
+                <p class="text-[11px]">Wajib diunggah sebelum Completed</p>
+              </div>
+            </div>
+            <label class="block w-full text-center py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer transition">
+              <i class="fa-solid fa-camera mr-1"></i> Unggah / Ambil Foto After
+              <input type="file" accept="image/*" class="hidden" onchange="handlePhotoUpload(event, 'after')" />
+            </label>
+          </div>
+        </div>
+
+        <div id="pokayoke-warning" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-base"></i>
+          <span id="pokayoke-msg">Validasi Poka-Yoke: Anda wajib mengunggah Foto Sesudah Perbaikan (After) sebelum mengubah status menjadi Completed!</span>
+        </div>
+
+        <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="closeModal('punch-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs sm:text-sm font-semibold hover:bg-slate-50">
+            Batal
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan Perubahan Real-Time
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 2: PREVIEW FOTO BEFORE-AFTER & VERIFIKASI CEPAT
+  ====================================================================== -->
+  <div id="photo-modal" class="fixed inset-0 z-50 hidden bg-slate-900/75 backdrop-blur-xs flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden border border-slate-200">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <h3 id="photo-modal-title" class="text-base font-bold">Verifikasi Dokumentasi Visual (Before vs After)</h3>
+          <p id="photo-modal-meta" class="text-xs text-slate-300"></p>
+        </div>
+        <button onclick="closeModal('photo-modal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="border border-red-200 rounded-xl p-3 bg-red-50/30">
+            <p class="text-xs font-bold text-red-700 uppercase mb-2 text-center">Dokumentasi Sebelum (Before)</p>
+            <div class="h-56 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
+              <img id="vm-before-img" src="" class="w-full h-full object-contain hidden" />
+              <p id="vm-before-empty" class="text-xs text-slate-400 italic">Tidak ada dokumentasi awal (kosong)</p>
+            </div>
+          </div>
+
+          <div class="border border-emerald-200 rounded-xl p-3 bg-emerald-50/30">
+            <p class="text-xs font-bold text-emerald-700 uppercase mb-2 text-center">Dokumentasi Sesudah (After)</p>
+            <div class="h-56 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center">
+              <img id="vm-after-img" src="" class="w-full h-full object-contain hidden" />
+              <p id="vm-after-empty" class="text-xs text-slate-400 italic">Belum ada foto hasil perbaikan</p>
+            </div>
+          </div>
+        </div>
+
+        <p id="vm-desc" class="mt-4 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200"></p>
+
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-2">
+          <button type="button" onclick="closeModal('photo-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            Tutup
+          </button>
+          <div class="flex items-center gap-2">
+            <button id="vm-btn-edit" type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">
+              <i class="fa-solid fa-pen-to-square mr-1"></i> Edit / Unggah Foto
+            </button>
+            <button id="vm-btn-verify" type="button" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">
+              <i class="fa-solid fa-check-double mr-1"></i> Setujui: Verified / Closed
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 3: TAMBAH / EDIT PENGGUNA (USER MANAGEMENT)
+  ====================================================================== -->
+  <div id="user-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 id="user-modal-title" class="text-base font-bold">Edit / Tambah Pengguna Sistem</h3>
+        <button onclick="closeModal('user-modal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="user-form" class="p-6 space-y-4">
+        <input type="hidden" id="um-id" />
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap / Nama PIC</label>
+          <input id="um-name" type="text" required placeholder="Contoh: Anton atau Fajar Sidiq"
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Email / Username Login</label>
+          <input id="um-email" type="text" required placeholder="Contoh: anton@lapangan.co.id"
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Peran Hak Akses (Role RBAC)</label>
+          <select id="um-role" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+            <option value="mgmt">Manajemen Kontraktor Utama (Administrator)</option>
+            <option value="pic">Tim Pemeliharaan Lapangan (PIC)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Jabatan / Keterangan</label>
+          <input id="um-title" type="text" placeholder="Contoh: Teknisi Elektrikal / Pengawas Mutu"
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Kata Sandi (Password)</label>
+          <input id="um-password" type="text" required placeholder="Minimal 4 karakter"
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+
+        <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">Simpan Pengguna</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 4: KONFIGURASI FIREBASE REALTIME DATABASE (LINTAS JARINGAN)
+  ====================================================================== -->
+  <div id="cloud-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="px-6 py-4 bg-blue-950 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-cloud text-blue-400"></i>
+          <h3 class="text-base font-bold">Sinkronisasi Realtime Lintas Jaringan</h3>
+        </div>
+        <button onclick="closeModal('cloud-modal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs text-slate-600">
+        <p class="leading-relaxed">
+          Agar data yang diedit oleh <strong>Manajemen</strong> di laptop/Wi-Fi kantor langsung muncul secara <strong>real-time</strong> di HP <strong>Tim Lapangan (PIC)</strong> dengan jaringan seluler yang berbeda saat di-hosting di <strong>GitHub Pages</strong>, masukkan URL Firebase Realtime Database Anda:
+        </p>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Firebase Realtime Database URL</label>
+          <input id="firebase-url-input" type="url" placeholder="https://nama-project-default-rtdb.firebaseio.com"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono text-slate-800 focus:ring-2 focus:ring-blue-600" />
+          <p class="text-[11px] text-slate-500 mt-1">
+            Tips: Buat database gratis di <a href="https://console.firebase.google.com" target="_blank" class="text-blue-600 underline">console.firebase.google.com</a> → Realtime Database → Start in Test Mode, lalu tempel URL-nya di sini.
+          </p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+          <p class="font-bold text-slate-800">Status Koneksi Saat Ini:</p>
+          <p id="cloud-status-detail" class="text-emerald-700 font-semibold">Terhubung ke Sinkronisasi Cloud</p>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+          <button type="button" onclick="useBuiltInCloudDemo()" class="px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100">
+            Gunakan Server Cloud Default
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeModal('cloud-modal')" class="px-3.5 py-2 rounded-xl border border-slate-300 font-semibold text-slate-700">Tutup</button>
+            <button type="button" onclick="saveFirebaseConfig()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">Hubungkan & Sinkronkan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL 5: PANDUAN DEPLOY KE GITHUB PAGES
+  ====================================================================== -->
+  <div id="github-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-brands fa-github text-lg"></i>
+          <h3 class="text-base font-bold">Cara Mengonlinekan Aplikasi di GitHub Pages</h3>
+        </div>
+        <button onclick="closeModal('github-modal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs text-slate-700 leading-relaxed">
+        <ol class="list-decimal pl-4 space-y-2.5">
+          <li><strong>Buat Repository Baru di GitHub:</strong> Buka <a href="https://github.com/new" target="_blank" class="text-blue-600 underline font-semibold">github.com/new</a>, beri nama misalnya <code class="bg-slate-100 px-1.5 py-0.5 rounded">sim-punchlist-kelompok4</code>, pilih <strong>Public</strong>, lalu klik <em>Create repository</em>.</li>
+          <li><strong>Unggah File Ini sebagai <code class="bg-slate-100 px-1.5 py-0.5 rounded">index.html</code>:</strong> Klik <em>uploading an existing file</em>, unggah file HTML ini dengan nama persis <code class="bg-slate-100 px-1.5 py-0.5 rounded font-bold">index.html</code>, lalu klik <em>Commit changes</em>.</li>
+          <li><strong>Aktifkan GitHub Pages:</strong> Masuk ke tab <strong>Settings → Pages</strong>, pada bagian <em>Branch</em> pilih <strong>main</strong> dan folder <strong>/(root)</strong>, lalu klik <strong>Save</strong>.</li>
+          <li><strong>Akses Online Lintas Jaringan:</strong> Dalam ±1 menit, aplikasi web Anda dapat dibuka dari HP maupun laptop mana saja melalui alamat <code class="bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded font-semibold">https://username-anda.github.io/sim-punchlist-kelompok4/</code>.</li>
+        </ol>
+        <div class="pt-2 flex justify-end">
+          <button onclick="closeModal('github-modal')" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-semibold">Mengerti</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       JAVASCRIPT APPLICATION LOGIC
+  ====================================================================== -->
+  <script>
+    // =========================================================================
+    // 1. GENERATOR ILUSTRASI DOKUMENTASI TEKNIS (SVG DATA URL)
+    //    Merepresentasikan foto lapangan Before & After sesuai tabel Bab I
+    // =========================================================================
+    function makeTechPhoto(type, label, sublabel) {
+      let svg = '';
+      if (type === 'cable-before') {
+        svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">
+          <rect width="320" height="220" fill="#26292e"/>
+          <circle cx="160" cy="110" r="88" fill="#525860" stroke="#7c838d" stroke-width="8"/>
+          <circle cx="160" cy="110" r="64" fill="#8b9198"/>
+          <path d="M160 110 L185 35 M160 110 L205 42" stroke="#18181b" stroke-width="6" stroke-linecap="round"/>
+          <rect x="132" y="92" width="24" height="44" rx="5" transform="rotate(24 144 114)" fill="#111827"/>
+          <path d="M180 55 L192 48" stroke="#ef4444" stroke-width="4"/>
+          <rect x="8" y="186" width="304" height="26" rx="4" fill="rgba(0,0,0,0.65)"/>
+          <text x="16" y="203" fill="#fca5a5" font-family="sans-serif" font-size="11" font-weight="bold">BEFORE: ${label}</text>
+        </svg>`;
+      } else if (type === 'cable-after') {
+        svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">
+          <rect width="320" height="220" fill="#1f2421"/>
+          <circle cx="185" cy="95" r="70" fill="#4b5563" stroke="#6b7280" stroke-width="6"/>
+          <path d="M95 75 C135 165, 225 145, 200 95" fill="none" stroke="#0f172a" stroke-width="14" stroke-linecap="round"/>
+          <rect x="92" y="62" width="44" height="22" rx="4" transform="rotate(35 110 72)" fill="#020617" stroke="#38bdf8" stroke-width="1.5"/>
+          <rect x="8" y="186" width="304" height="26" rx="4" fill="rgba(0,0,0,0.7)"/>
+          <text x="16" y="203" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="bold">AFTER: ${label} (${sublabel})</text>
+        </svg>`;
+      } else if (type === 'trafo-after') {
+        svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">
+          <rect width="320" height="220" fill="#292524"/>
+          <rect x="40" y="95" width="240" height="32" rx="4" fill="#57534e"/>
+          <path d="M30 165 L145 105 L270 140" fill="none" stroke="#b45309" stroke-width="12" stroke-linecap="round"/>
+          <path d="M135 60 L150 105" stroke="#16a34a" stroke-width="10" stroke-linecap="round"/>
+          <polygon points="132,96 168,96 162,120 138,120" fill="#d4d4d8" stroke="#3f3f46" stroke-width="2"/>
+          <circle cx="150" cy="108" r="7" fill="#e4e4e7" stroke="#18181b" stroke-width="2"/>
+          <rect x="8" y="186" width="304" height="26" rx="4" fill="rgba(0,0,0,0.7)"/>
+          <text x="16" y="203" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="bold">AFTER: ${label} (${sublabel})</text>
+        </svg>`;
+      } else if (type === 'lamp-before') {
+        svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">
+          <rect width="320" height="220" fill="#1c1917"/>
+          <circle cx="160" cy="105" r="82" fill="#3f3f46" stroke="#71717a" stroke-width="8"/>
+          <rect x="138" y="45" width="44" height="22" rx="4" fill="#18181b"/>
+          <rect x="138" y="143" width="44" height="22" rx="4" fill="#18181b"/>
+          <text x="200" y="176" fill="#e4e4e7" font-family="monospace" font-size="10">${sublabel}</text>
+          <rect x="8" y="186" width="304" height="26" rx="4" fill="rgba(0,0,0,0.75)"/>
+          <text x="16" y="203" fill="#fca5a5" font-family="sans-serif" font-size="11" font-weight="bold">BEFORE: ${label}</text>
+        </svg>`;
+      } else if (type === 'lamp-after') {
+        svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">
+          <rect width="320" height="220" fill="#090d16"/>
+          <ellipse cx="160" cy="65" rx="42" ry="18" fill="#ffffff"/>
+          <ellipse cx="160" cy="65" rx="68" ry="30" fill="rgba(255,255,255,0.22)"/>
+          <ellipse cx="160" cy="145" rx="42" ry="18" fill="${sublabel.includes('225') ? '#ef4444' : '#ffffff'}"/>
+          <ellipse cx="160" cy="145" rx="68" ry="30" fill="${sublabel.includes('225') ? 'rgba(239,68,68,0.28)' : 'rgba(255,255,255,0.22)'}"/>
+          <text x="200" y="176" fill="#e4e4e7" font-family="monospace" font-size="10">${sublabel}</text>
+          <rect x="8" y="186" width="304" height="26" rx="4" fill="rgba(0,0,0,0.75)"/>
+          <text x="16" y="203" fill="#6ee7b7" font-family="sans-serif" font-size="11" font-weight="bold">AFTER: ${label}</text>
+        </svg>`;
+      }
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    // =========================================================================
+    // 2. DATASET AWAL: 15 ITEM PUNCH LIST STUDI KASUS (BAB I LATAR BELAKANG)
+    //    & DAFTAR PENGGUNA KELOMPOK 4 + PIC LAPANGAN
+    // =========================================================================
+    const DEFAULT_USERS = [
+      { id: 'u1', name: 'Fajar Sidiq Al-Hayyu', email: 'admin@kontraktor.co.id', password: '123', role: 'mgmt', title: 'Ketua Kelompok 4 • Manajemen Kontraktor Utama' },
+      { id: 'u2', name: 'Cahyati', email: 'cahyati@kontraktor.co.id', password: '123', role: 'mgmt', title: 'Manajemen Pengawas Mutu (NIM 221010850023)' },
+      { id: 'u3', name: 'Fikri Akbar Surya Ilham', email: 'fikri@kontraktor.co.id', password: '123', role: 'mgmt', title: 'Manajemen Pengendali Jadwal (NIM 221010800627)' },
+      { id: 'u4', name: 'M. Hafidz Febrian', email: 'hafidz@kontraktor.co.id', password: '123', role: 'mgmt', title: 'Manajemen Dokumentasi FHO (NIM 221010850030)' },
+      { id: 'u5', name: 'Riki M Cahyadi', email: 'riki@kontraktor.co.id', password: '123', role: 'mgmt', title: 'Manajemen Logistik & Material (NIM 221010850104)' },
+      { id: 'u6', name: 'Yogi Khoerul', email: 'yogi@kontraktor.co.id', password: '123', role: 'mgmt', title: 'Manajemen Evaluasi Kinerja (NIM 221010850002)' },
+      { id: 'u7', name: 'Anton', email: 'anton@lapangan.co.id', password: '123', role: 'pic', title: 'PIC Tim Pemeliharaan Lapangan — Elektrikal' },
+      { id: 'u8', name: 'Adul', email: 'adul@lapangan.co.id', password: '123', role: 'pic', title: 'PIC Tim Pemeliharaan Lapangan — Terminasi & Grounding' },
+      { id: 'u9', name: 'Budi', email: 'budi@lapangan.co.id', password: '123', role: 'pic', title: 'PIC Tim Pemeliharaan Lapangan — Trafo & Penerangan' },
+      { id: 'u10', name: 'Ali', email: 'ali@lapangan.co.id', password: '123', role: 'pic', title: 'PIC Tim Pemeliharaan Lapangan — Penerangan & Kabel' }
+    ];
+
+    function buildDefaultPunchLists() {
+      return [
+        {
+          id: 'PL-001', no: 1,
+          title: 'Konekting Kabel Rusak',
+          description: 'Koneksi/terminasi kabel mengalami kerusakan; perlu dilakukan pemotongan ulang, penyambungan kembali, atau penggantian skun kabel (cable lug).',
+          pic: 'Anton', priority: 'High',
+          foundDate: '2026-05-21', dueDate: '2026-11-21', completedDate: '2026-11-21',
+          status: 'Verified/Closed',
+          remarks: 'Pemotongan ulang dan isolasi heatshrink konektor selesai.',
+          photoBefore: makeTechPhoto('cable-before', 'Terminasi Kabel Rusak #1', '21 Mei 2026'),
+          photoAfter: makeTechPhoto('cable-after', 'Konektor Terpasang & Terisolasi', '21 Nov 2026')
+        },
+        {
+          id: 'PL-002', no: 2,
+          title: 'Konekting Kabel Rusak',
+          description: 'Konektor/terminasi kabel mengalami kerusakan/kendur; perlu perbaikan koneksi serta pengencangan ulang baut terminal.',
+          pic: 'Adul', priority: 'High',
+          foundDate: '2026-05-14', dueDate: '2026-11-14', completedDate: '2026-11-14',
+          status: 'Verified/Closed',
+          remarks: 'Konektor diperbaiki dan dikencangkan ulang.',
+          photoBefore: makeTechPhoto('cable-before', 'Konektor Kendur di Pit #2', '14 Mei 2026'),
+          photoAfter: makeTechPhoto('cable-after', 'Sambungan Kencang & Rapi', '14 Nov 2026')
+        },
+        {
+          id: 'PL-003', no: 3,
+          title: 'Kabel BC Belum Di Couple Ke Trafo',
+          description: 'Kabel Bare Copper (BC) untuk sistem pembumian (grounding) belum terhubung/terpasang pada busbar/terminal grounding trafo.',
+          pic: 'Anton', priority: 'High',
+          foundDate: '2026-06-19', dueDate: '2026-11-26', completedDate: '2026-11-26',
+          status: 'Verified/Closed',
+          remarks: 'Kabel BC sudah dicouple ke busbar grounding trafo.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('trafo-after', 'Kabel BC Terpasang ke Trafo #3', '26 Nov 2026')
+        },
+        {
+          id: 'PL-004', no: 4,
+          title: 'Kabel BC Belum Di Couple Ke Trafo',
+          description: 'Kabel BC grounding belum dikoneksikan ke bodi/body grounding trafo; lakukan penyambungan menggunakan klem/skun kabel yang sesuai.',
+          pic: 'Budi', priority: 'High',
+          foundDate: '2026-06-19', dueDate: '2026-11-26', completedDate: '2026-11-26',
+          status: 'Verified/Closed',
+          remarks: 'Terpasang dengan skun & klem standar.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('trafo-after', 'Body Grounding Trafo #4', '26 Nov 2026')
+        },
+        {
+          id: 'PL-005', no: 5,
+          title: 'Kabel BC Belum Di Couple Ke Trafo',
+          description: 'Kabel BC belum terpasang ke terminal neutral/grounding trafo; lakukan penyambungan dan pastikan koneksi kencang.',
+          pic: 'Adul', priority: 'High',
+          foundDate: '2026-06-17', dueDate: '2026-11-17', completedDate: '2026-11-17',
+          status: 'Verified/Closed',
+          remarks: 'Terminal neutral/grounding trafo terhubung kuat.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('trafo-after', 'Koneksi Neutral Grounding #5', '17 Nov 2026')
+        },
+        {
+          id: 'PL-006', no: 6,
+          title: 'Kabel BC Belum Di Couple Ke Trafo',
+          description: 'Kabel BC grounding belum terhubung ke trafo; lakukan terminasi kabel BC pada titik grounding trafo.',
+          pic: 'Anton', priority: 'Medium',
+          foundDate: '2026-06-19', dueDate: '2026-11-26', completedDate: '2026-11-26',
+          status: 'Verified/Closed',
+          remarks: 'Terminasi kabel BC selesai.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('trafo-after', 'Titik Grounding Trafo #6', '26 Nov 2026')
+        },
+        {
+          id: 'PL-007', no: 7,
+          title: 'Kabel BC Belum Di Couple Ke Trafo',
+          description: 'Penyambungan kabel BC ke grounding trafo belum dilakukan; persiapkan lug kabel dan lakukan pembautan pada terminal trafo.',
+          pic: 'Adul', priority: 'High',
+          foundDate: '2026-07-01', dueDate: '2026-11-23', completedDate: '',
+          status: 'Completed',
+          remarks: 'Lug kabel BC sudah dibaut ke terminal trafo, menunggu verifikasi Manajemen.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('trafo-after', 'Pembautan Lug Grounding #7', '01 Nov 2026')
+        },
+        {
+          id: 'PL-008', no: 8,
+          title: 'Kabel BC Belum Di Couple Ke Trafo',
+          description: 'Kabel BC grounding mengantung dan belum terhubung ke trafo; lakukan terminasi dan pastikan nilai tahanan grounding sesuai standar.',
+          pic: 'Budi', priority: 'High',
+          foundDate: '2026-06-19', dueDate: '2026-11-26', completedDate: '',
+          status: 'In Progress',
+          remarks: 'Sedang pengukuran tahanan grounding (Megger/Earth Tester) sebelum ditutup.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('trafo-after', 'Terminasi BC & Uji Tahanan #8', '26 Nov 2026')
+        },
+        {
+          id: 'PL-009', no: 9,
+          title: 'Konekting Kabel Rusak',
+          description: 'Konektor/skun kabel mengalami kerusakan/korosi; lakukan penggantian konektor baru dan isolasi ulang.',
+          pic: 'Anton', priority: 'Medium',
+          foundDate: '2026-05-18', dueDate: '2026-11-18', completedDate: '2026-11-18',
+          status: 'Verified/Closed',
+          remarks: 'Konektor 2-pin baru terpasang dan diisolasi rapat.',
+          photoBefore: makeTechPhoto('cable-before', 'Konektor Korosi #9', '18 Mei 2026'),
+          photoAfter: makeTechPhoto('cable-after', 'Penggantian Konektor Baru #9', '18 Nov 2026')
+        },
+        {
+          id: 'PL-010', no: 10,
+          title: 'Lampu Mati',
+          description: 'Lampu penerangan tidak menyala; lakukan pengecekan suplai daya, sakelar, ballast, atau lakukan penggantian bohlam lampu baru.',
+          pic: 'Ali', priority: 'Medium',
+          foundDate: '2026-05-12', dueDate: '2026-11-12', completedDate: '2026-11-12',
+          status: 'Verified/Closed',
+          remarks: 'Lampu RCL-221 menyala normal setelah penggantian modul lampu.',
+          photoBefore: makeTechPhoto('lamp-before', 'Lampu RCL-221 Mati', 'RCL-221 OFF'),
+          photoAfter: makeTechPhoto('lamp-after', 'Lampu RCL-221 Menyala Normal', 'RCL-221 ON')
+        },
+        {
+          id: 'PL-011', no: 11,
+          title: 'Konekting Kabel Rusak',
+          description: 'Koneksi kabel terbakar/rusak; perlu perbaikan kabel, penggantian terminal block/skun, serta pengujian kontinuitas.',
+          pic: 'Adul', priority: 'High',
+          foundDate: '2026-06-17', dueDate: '2026-11-10', completedDate: '2026-11-10',
+          status: 'Verified/Closed',
+          remarks: 'Pengujian kontinuitas lolos dan sambungan terisolasi.',
+          photoBefore: makeTechPhoto('cable-before', 'Selongsong Kabel Terbakar #11', '17 Jun 2026'),
+          photoAfter: makeTechPhoto('cable-after', 'Sambungan & Isolasi Baru #11', '10 Nov 2026')
+        },
+        {
+          id: 'PL-012', no: 12,
+          title: 'Lampu Mati',
+          description: 'Armatur/bohlam lampu mati; lakukan pemeriksaan pengkabelan fasa-netral dan ganti armatur/lampu jika rusak.',
+          pic: 'Budi', priority: 'Medium',
+          foundDate: '2026-05-12', dueDate: '2026-11-12', completedDate: '2026-11-12',
+          status: 'Verified/Closed',
+          remarks: 'Armatur RCL-225 diganti dan menyala putih-merah sesuai standar.',
+          photoBefore: makeTechPhoto('lamp-before', 'Armatur RCL-225 Mati', 'RCL-225 OFF'),
+          photoAfter: makeTechPhoto('lamp-after', 'Lampu RCL-225 Menyala', 'RCL-225 ON')
+        },
+        {
+          id: 'PL-013', no: 13,
+          title: 'Konekting Kabel Rusak',
+          description: 'Terminasi kabel terkelupas/rusak; lakukan pemotongan bagian kabel rusak dan pasang skun kabel baru.',
+          pic: 'Ali', priority: 'Medium',
+          foundDate: '2026-06-18', dueDate: '2026-11-18', completedDate: '2026-11-18',
+          status: 'Verified/Closed',
+          remarks: 'Skun baru terpasang dan diisolasi.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('cable-after', 'Terminasi Skun Baru #13', '18 Nov 2026')
+        },
+        {
+          id: 'PL-014', no: 14,
+          title: 'Konekting Kabel Rusak',
+          description: 'Koneksi sambungan kabel tidak sempurna/rusak; lakukan terminasi ulang dan kencangkan sesuai spesifikasi torak/baut.',
+          pic: 'Ali', priority: 'Medium',
+          foundDate: '2026-05-18', dueDate: '2026-11-18', completedDate: '2026-11-18',
+          status: 'Verified/Closed',
+          remarks: 'Terminasi ulang selesai sesuai torsi.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('cable-after', 'Terminasi Ulang #14', '18 Nov 2026')
+        },
+        {
+          id: 'PL-015', no: 15,
+          title: 'Konekting Kabel Rusak',
+          description: 'Koneksi kabel cacat/rusak; lakukan penggantian aksesoris sambungan dan lakukan pengujian isolasi kabel (megger test).',
+          pic: 'Anton', priority: 'Low',
+          foundDate: '2026-05-18', dueDate: '2026-11-18', completedDate: '2026-11-18',
+          status: 'Verified/Closed',
+          remarks: 'Hasil megger test memenuhi standar isolasi.',
+          photoBefore: '',
+          photoAfter: makeTechPhoto('cable-after', 'Lolos Megger Test #15', '18 Nov 2026')
+        }
+      ];
+    }
+
+    // =========================================================================
+    // 3. STATE MANAGEMENT & REAL-TIME SYNC ENGINE (FIREBASE RTDB + LOCALSTORAGE)
+    // =========================================================================
+    const STORAGE_KEYS = {
+      PUNCH_LISTS: 'simpunch_items_v1',
+      USERS: 'simpunch_users_v1',
+      SESSION: 'simpunch_session_v1',
+      FIREBASE_URL: 'simpunch_firebase_url_v1'
+    };
+
+    // Default public demo RTDB endpoint (users can also input their own Firebase RTDB URL)
+    const DEFAULT_FIREBASE_URL = 'https://sim-punchlist-unpam-k4-default-rtdb.firebaseio.com';
+
+    let appState = {
+      punchLists: [],
+      users: [],
+      currentUser: null,
+      firebaseConnected: false,
+      firebaseDb: null,
+      tempBeforePhoto: '',
+      tempAfterPhoto: ''
+    };
+
+    function initApp() {
+      // Load initial local data first for instant render
+      const savedUsers = localStorage.getItem(STORAGE_KEYS.USERS);
+      appState.users = savedUsers ? JSON.parse(savedUsers) : DEFAULT_USERS;
+
+      const savedItems = localStorage.getItem(STORAGE_KEYS.PUNCH_LISTS);
+      appState.punchLists = savedItems ? JSON.parse(savedItems) : buildDefaultPunchLists();
+
+      // Save defaults if first visit
+      if (!savedUsers) localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
+      if (!savedItems) localStorage.setItem(STORAGE_KEYS.PUNCH_LISTS, JSON.stringify(appState.punchLists));
+
+      // Initialize Firebase Realtime Database connection
+      const savedFbUrl = localStorage.getItem(STORAGE_KEYS.FIREBASE_URL) || DEFAULT_FIREBASE_URL;
+      document.getElementById('firebase-url-input').value = savedFbUrl;
+      connectFirebase(savedFbUrl, true);
+
+      // Check existing login session (or stay on Login Screen first as requested)
+      const savedSession = sessionStorage.getItem(STORAGE_KEYS.SESSION);
+      if (savedSession) {
+        const parsedUser = JSON.parse(savedSession);
+        const freshUser = appState.users.find(u => u.id === parsedUser.id) || parsedUser;
+        enterApp(freshUser);
+      } else {
+        showLoginScreen();
+      }
+    }
+
+    function connectFirebase(dbUrl, silent = false) {
+      if (!dbUrl || !dbUrl.startsWith('http')) {
+        setSyncStatus(false, 'Mode Penyimpanan Lokal');
+        return;
+      }
+
+      try {
+        if (firebase.apps.length > 0) {
+          firebase.app().delete().then(() => initFirebaseInstance(dbUrl, silent)).catch(() => initFirebaseInstance(dbUrl, silent));
+        } else {
+          initFirebaseInstance(dbUrl, silent);
+        }
+      } catch (err) {
+        console.warn('Firebase fallback to localStorage:', err);
+        setSyncStatus(false, 'Mode Lokal (Offline)');
+      }
+    }
+
+    function initFirebaseInstance(dbUrl, silent) {
+      try {
+        const app = firebase.initializeApp({ databaseURL: dbUrl });
+        const db = firebase.database(app);
+        appState.firebaseDb = db;
+
+        // Monitor connection status
+        db.ref('.info/connected').on('value', (snap) => {
+          const isConn = snap.val() === true;
+          appState.firebaseConnected = isConn;
+          if (isConn) {
+            setSyncStatus(true, 'Realtime Cloud Terhubung');
+            // Seed cloud if empty
+            db.ref('sim_punchlist_k4').once('value').then((rootSnap) => {
+              if (!rootSnap.exists()) {
+                syncAllToStorageAndCloud();
+              }
+            }).catch(() => {});
+          } else {
+            setSyncStatus(false, 'Sinkronisasi Lokal (Menghubungkan...)');
+          }
+        });
+
+        // Listen for realtime punch list updates across networks
+        db.ref('sim_punchlist_k4/punchLists').on('value', (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            const list = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
+            if (list.length > 0) {
+              appState.punchLists = list;
+              localStorage.setItem(STORAGE_KEYS.PUNCH_LISTS, JSON.stringify(list));
+              if (appState.currentUser) renderAll();
+            }
+          }
+        }, (err) => {
+          console.warn('RTDB read permission/network fallback:', err.message);
+          setSyncStatus(false, 'Mode Lokal (RTDB Terbatas)');
+        });
+
+        // Listen for realtime user updates across networks
+        db.ref('sim_punchlist_k4/users').on('value', (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            const uList = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
+            if (uList.length > 0) {
+              appState.users = uList;
+              localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(uList));
+              if (appState.currentUser) {
+                populatePicDropdowns();
+                renderUsersTable();
+              }
+            }
+          }
+        });
+
+        if (!silent) {
+          showToast('Konfigurasi Firebase Realtime Database disimpan!', 'success');
+        }
+      } catch (e) {
+        setSyncStatus(false, 'Mode Lokal (Fallback)');
+      }
+    }
+
+    function setSyncStatus(isOnline, labelText) {
+      const pill = document.getElementById('sync-status-pill');
+      const dot = document.getElementById('sync-dot');
+      const label = document.getElementById('sync-label');
+      const detail = document.getElementById('cloud-status-detail');
+      const loginBadge = document.getElementById('login-sync-badge');
+
+      if (label) label.textContent = labelText;
+      if (detail) {
+        detail.textContent = isOnline
+          ? 'Terhubung Real-Time ke Firebase RTDB (Perubahan otomatis muncul di perangkat & jaringan lain).'
+          : 'Berjalan dalam Mode Penyimpanan Lokal (Masukkan URL Firebase RTDB Test Mode untuk sinkronisasi lintas jaringan).';
+        detail.className = isOnline ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold';
+      }
+
+      if (isOnline) {
+        pill.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        if (loginBadge) {
+          loginBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+          loginBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>Realtime Cloud Aktif</span>';
+        }
+      } else {
+        pill.className = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+        if (loginBadge) {
+          loginBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+          loginBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Mode Lokal / Siap Cloud</span>';
+        }
+      }
+    }
+
+    function saveFirebaseConfig() {
+      const url = document.getElementById('firebase-url-input').value.trim().replace(/\/$/, '');
+      if (!url) {
+        showToast('Masukkan URL Firebase Realtime Database yang valid.', 'error');
+        return;
+      }
+      localStorage.setItem(STORAGE_KEYS.FIREBASE_URL, url);
+      connectFirebase(url, false);
+      closeModal('cloud-modal');
+    }
+
+    function useBuiltInCloudDemo() {
+      document.getElementById('firebase-url-input').value = DEFAULT_FIREBASE_URL;
+      saveFirebaseConfig();
+    }
+
+    function syncAllToStorageAndCloud() {
+      localStorage.setItem(STORAGE_KEYS.PUNCH_LISTS, JSON.stringify(appState.punchLists));
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
+
+      if (appState.firebaseDb) {
+        appState.firebaseDb.ref('sim_punchlist_k4').set({
+          punchLists: appState.punchLists,
+          users: appState.users,
+          updatedAt: new Date().toISOString()
+        }).catch((err) => {
+          console.warn('Cloud sync write skipped (using local storage):', err.message);
+        });
+      }
+    }
+
+    // =========================================================================
+    // 4. AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC)
+    // =========================================================================
+    function showLoginScreen() {
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('app-shell').classList.add('hidden');
+    }
+
+    function togglePasswordVisibility() {
+      const pwd = document.getElementById('login-password');
+      const icon = document.getElementById('pwd-eye-icon');
+      if (pwd.type === 'password') {
+        pwd.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+      } else {
+        pwd.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+      }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const identifier = document.getElementById('login-identifier').value.trim().toLowerCase();
+      const password = document.getElementById('login-password').value.trim();
+
+      const matched = appState.users.find(u =>
+        (u.email.toLowerCase() === identifier || u.name.toLowerCase() === identifier) &&
+        u.password === password
+      );
+
+      if (!matched) {
+        const errBox = document.getElementById('login-error-box');
+        errBox.classList.remove('hidden');
+        document.getElementById('login-error-text').textContent = 'Email/Username atau Kata Sandi tidak sesuai. Gunakan tombol akses cepat di bawah untuk demo.';
+        return;
+      }
+
+      document.getElementById('login-error-box').classList.add('hidden');
+      enterApp(matched);
+    });
+
+    function quickLogin(email) {
+      const user = appState.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || appState.users[0];
+      document.getElementById('login-identifier').value = user.email;
+      document.getElementById('login-password').value = user.password;
+      enterApp(user);
+    }
+
+    function enterApp(user) {
+      appState.currentUser = user;
+      sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(user));
+
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+
+      // Update Sidebar Profile
+      const initials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      document.getElementById('sidebar-avatar').textContent = initials;
+      document.getElementById('sidebar-user-name').textContent = user.name;
+
+      const roleBadge = document.getElementById('sidebar-user-role');
+      const isMgmt = user.role === 'mgmt';
+      roleBadge.textContent = isMgmt ? 'Manajemen Kontraktor Utama' : 'Tim Pemeliharaan Lapangan (PIC)';
+      roleBadge.className = isMgmt
+        ? 'inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/20'
+        : 'inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-400/20';
+
+      // RBAC UI Visibility
+      document.getElementById('btn-header-add').classList.toggle('hidden', !isMgmt);
+      document.getElementById('btn-tab-add').classList.toggle('hidden', !isMgmt);
+
+      populatePicDropdowns();
+      switchTab('dashboard');
+      renderAll();
+      showToast(`Selamat datang, ${user.name}!`, 'success');
+    }
+
+    function logout() {
+      appState.currentUser = null;
+      sessionStorage.removeItem(STORAGE_KEYS.SESSION);
+      showLoginScreen();
+      showToast('Anda telah keluar dari sistem.', 'info');
+    }
+
+    // =========================================================================
+    // 5. NAVIGATION & TABS
+    // =========================================================================
+    function toggleMobileSidebar(open) {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (open) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function switchTab(tabName) {
+      const tabs = ['dashboard', 'punchlists', 'early-warning', 'reports', 'users'];
+      const titles = {
+        'dashboard': 'Dashboard Monitoring Utama',
+        'punchlists': 'Data Punch List & Eksekusi Perbaikan',
+        'early-warning': 'Early Warning System (Kontrol Masa Pemeliharaan 5 Bulan)',
+        'reports': 'Laporan Rekapitulasi Bergambar & Berita Acara FHO',
+        'users': 'Manajemen Pengguna & Hak Akses (RBAC)'
+      };
+
+      tabs.forEach(t => {
+        const el = document.getElementById(`view-${t}`);
+        if (el) el.classList.toggle('hidden', t !== tabName);
+      });
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.getAttribute('data-tab') === tabName;
+        btn.className = active
+          ? 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition bg-blue-600 text-white shadow-sm'
+          : 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition';
+      });
+
+      document.getElementById('page-title').textContent = titles[tabName] || 'SIM-PUNCHLIST';
+      toggleMobileSidebar(false);
+      renderAll();
+    }
+
+    // =========================================================================
+    // 6. ALGORITMA EARLY WARNING SYSTEM (BAB III SECTION 3.3.3)
+    // =========================================================================
+    function evaluateEarlyWarning(item) {
+      if (item.status === 'Verified/Closed') {
+        return {
+          zone: 'green',
+          label: 'Hijau (Aman)',
+          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          daysDiff: null
+        };
+      }
+
+      // Reference current date: Nov 21, 2026 (within 5th maintenance month)
+      const now = new Date('2026-11-21T00:00:00');
+      const due = new Date((item.dueDate || '2026-11-26') + 'T00:00:00');
+      const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return {
+          zone: 'red',
+          label: `Merah (Overdue H+${Math.abs(diffDays)})`,
+          badgeClass: 'bg-red-100 text-red-800 border-red-300 font-bold',
+          daysDiff: diffDays
+        };
+      } else if (diffDays <= 3) {
+        return {
+          zone: 'orange',
+          label: `Oranye (Kritis H-${diffDays})`,
+          badgeClass: 'bg-orange-100 text-orange-800 border-orange-300 font-bold',
+          daysDiff: diffDays
+        };
+      } else if (diffDays <= 14) {
+        return {
+          zone: 'yellow',
+          label: `Kuning (H-${diffDays})`,
+          badgeClass: 'bg-amber-100 text-amber-800 border-amber-300 font-semibold',
+          daysDiff: diffDays
+        };
+      } else {
+        return {
+          zone: 'green',
+          label: `Hijau (H-${diffDays})`,
+          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          daysDiff: diffDays
+        };
+      }
+    }
+
+    function getStatusBadge(status) {
+      switch (status) {
+        case 'Verified/Closed':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-circle-check"></i> Verified/Closed</span>';
+        case 'Completed':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fa-solid fa-check"></i> Completed</span>';
+        case 'In Progress':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-spinner"></i> In Progress</span>';
+        case 'Pending':
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="fa-solid fa-pause"></i> Pending</span>';
+        default:
+          return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-regular fa-circle"></i> Open</span>';
+      }
+    }
+
+    function formatIndoDate(dateStr) {
+      if (!dateStr) return '-';
+      const months = ['Jan', 'Feb', 'Mei', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return dateStr;
+      const mIdx = parseInt(parts[1], 10) - 1;
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      return `${parts[2]} ${monthNames[mIdx] || parts[1]} ${parts[0]}`;
+    }
+
+    // =========================================================================
+    // 7. RENDERING SEMUA KOMPONEN UI
+    // =========================================================================
+    function renderAll() {
+      const items = appState.punchLists;
+      const total = items.length;
+      const verifiedCount = items.filter(i => i.status === 'Verified/Closed').length;
+      const activeCount = items.filter(i => ['Open', 'In Progress', 'Pending', 'Completed'].includes(i.status)).length;
+      const warningItems = items.filter(i => {
+        const ew = evaluateEarlyWarning(i);
+        return ew.zone !== 'green' && i.status !== 'Verified/Closed';
+      });
+
+      // Update Sidebar Badges & KPI Cards
+      document.getElementById('nav-badge-total').textContent = total;
+      document.getElementById('nav-badge-warning').textContent = warningItems.length;
+      document.getElementById('nav-badge-users').textContent = appState.users.length;
+
+      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-active').textContent = activeCount;
+      document.getElementById('kpi-warning').textContent = warningItems.length;
+      document.getElementById('kpi-verified').textContent = verifiedCount;
+
+      const pct = total > 0 ? ((verifiedCount / total) * 100).toFixed(1) : '0.0';
+      document.getElementById('kpi-verified-pct').textContent = `${pct}% Tuntas Terverifikasi`;
+
+      const ewBannerText = document.getElementById('dashboard-ew-text');
+      if (warningItems.length > 0) {
+        ewBannerText.innerHTML = `Terdapat <strong>${warningItems.length} item punch list</strong> mendekati tenggat atau menunggu verifikasi sebelum masa pemeliharaan bulan ke-5 berakhir!`;
+      } else {
+        ewBannerText.innerHTML = `Seluruh <strong>${total} item punch list</strong> dalam kondisi aman/tuntas (0 item terlambat memasuki bulan ke-6).`;
+      }
+
+      renderCategoryProgress(items);
+      renderPicSummary(items);
+      renderDashboardTable(items);
+      renderFullPunchTable(items);
+      renderEarlyWarningCards(items);
+      renderReportTable();
+      renderUsersTable();
+    }
+
+    function renderCategoryProgress(items) {
+      const categories = [
+        { name: 'Konekting Kabel Rusak', match: (t) => t.toLowerCase().includes('konekting'), color: 'bg-blue-600' },
+        { name: 'Kabel BC Belum Di Couple Ke Trafo', match: (t) => t.toLowerCase().includes('kabel bc'), color: 'bg-teal-600' },
+        { name: 'Lampu Mati (Penerangan)', match: (t) => t.toLowerCase().includes('lampu'), color: 'bg-emerald-600' }
+      ];
+
+      const container = document.getElementById('category-progress-container');
+      container.innerHTML = categories.map(cat => {
+        const subset = items.filter(i => cat.match(i.title));
+        const done = subset.filter(i => i.status === 'Verified/Closed').length;
+        const pct = subset.length > 0 ? Math.round((done / subset.length) * 100) : 0;
+        return `
+          <div>
+            <div class="flex justify-between text-xs font-semibold mb-1.5">
+              <span class="text-slate-800">${cat.name} (${subset.length} Item)</span>
+              <span class="text-slate-600">${done}/${subset.length} Verified (${pct}%)</span>
+            </div>
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div class="${cat.color} h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPicSummary(items) {
+      const pics = [...new Set(items.map(i => i.pic))];
+      const container = document.getElementById('pic-summary-container');
+      container.innerHTML = pics.map(pic => {
+        const pItems = items.filter(i => i.pic === pic);
+        const pDone = pItems.filter(i => i.status === 'Verified/Closed').length;
+        return `
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-slate-800 text-white text-xs font-bold flex items-center justify-center">
+                ${pic.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-800">${pic}</p>
+                <p class="text-[11px] text-slate-500">Tim Pemeliharaan Lapangan</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-extrabold text-slate-800">${pDone}/${pItems.length}</span>
+              <p class="text-[10px] text-emerald-600 font-semibold">Tuntas</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderDashboardTable(items) {
+      const tbody = document.getElementById('dashboard-table-body');
+      const isMgmt = appState.currentUser && appState.currentUser.role === 'mgmt';
+
+      tbody.innerHTML = items.map(item => {
+        const ew = evaluateEarlyWarning(item);
+        const canEdit = isMgmt || (appState.currentUser && appState.currentUser.name.toLowerCase() === item.pic.toLowerCase());
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3 px-4 font-bold text-slate-800 whitespace-nowrap">${item.id}</td>
+            <td class="py-3 px-4">
+              <p class="font-semibold text-slate-800">${item.title}</p>
+              <p class="text-xs text-slate-500 line-clamp-1">${item.description}</p>
+            </td>
+            <td class="py-3 px-4 font-medium text-slate-700 whitespace-nowrap">${item.pic}</td>
+            <td class="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
+              <div>Temuan: <strong>${formatIndoDate(item.foundDate)}</strong></div>
+              <div>Selesai: <strong>${formatIndoDate(item.completedDate || item.dueDate)}</strong></div>
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap">
+              <span class="px-2.5 py-1 rounded-full text-xs border ${ew.badgeClass}">${ew.label}</span>
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap">${getStatusBadge(item.status)}</td>
+            <td class="py-3 px-4 whitespace-nowrap">
+              <button onclick="openPhotoCompare('${item.id}')" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 text-blue-700 text-xs font-semibold border border-slate-200 transition">
+                <i class="fa-solid fa-images"></i>
+                <span>${item.photoBefore ? 'Before' : '-'} / ${item.photoAfter ? 'After' : '-'}</span>
+              </button>
+            </td>
+            <td class="py-3 px-4 text-right whitespace-nowrap">
+              <button onclick="openPunchModal('${item.id}')" class="px-3 py-1.5 rounded-lg ${canEdit ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'} text-xs font-semibold transition">
+                ${canEdit ? 'Edit / Update' : 'Detail'}
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderFullPunchTable(items) {
+      const search = (document.getElementById('filter-search')?.value || '').toLowerCase();
+      const statusFilter = document.getElementById('filter-status')?.value || 'ALL';
+      const picFilter = document.getElementById('filter-pic')?.value || 'ALL';
+      const isMgmt = appState.currentUser && appState.currentUser.role === 'mgmt';
+
+      const filtered = items.filter(item => {
+        const matchSearch = !search ||
+          item.id.toLowerCase().includes(search) ||
+          item.title.toLowerCase().includes(search) ||
+          item.description.toLowerCase().includes(search) ||
+          item.pic.toLowerCase().includes(search);
+        const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
+        const matchPic = picFilter === 'ALL' || item.pic === picFilter;
+        return matchSearch && matchStatus && matchPic;
+      });
+
+      const tbody = document.getElementById('full-table-body');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-500 text-sm">Tidak ada item punch list yang sesuai dengan filter pencarian.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((item, idx) => {
+        const ew = evaluateEarlyWarning(item);
+        const canEdit = isMgmt || (appState.currentUser && appState.currentUser.name.toLowerCase() === item.pic.toLowerCase());
+
+        return `
+          <tr class="hover:bg-slate-50 transition align-top">
+            <td class="py-3 px-4 font-bold text-slate-700">${item.no || idx + 1}<div class="text-[11px] text-blue-600">${item.id}</div></td>
+            <td class="py-3 px-4 font-bold text-slate-800">${item.title}</td>
+            <td class="py-3 px-4 text-xs text-slate-600 leading-relaxed">${item.description}</td>
+            <td class="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">${item.pic}</td>
+            <td class="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">${formatIndoDate(item.foundDate)}</td>
+            <td class="py-3 px-4 text-center">
+              ${item.photoBefore
+                ? `<img src="${item.photoBefore}" onclick="openPhotoCompare('${item.id}')" class="w-16 h-12 object-cover rounded-lg border border-slate-300 cursor-pointer mx-auto hover:scale-105 transition" title="Klik untuk perbesar" />`
+                : `<span class="text-[11px] text-slate-400 italic">Kosong</span>`}
+            </td>
+            <td class="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">${formatIndoDate(item.completedDate || item.dueDate)}</td>
+            <td class="py-3 px-4 text-center">
+              ${item.photoAfter
+                ? `<img src="${item.photoAfter}" onclick="openPhotoCompare('${item.id}')" class="w-16 h-12 object-cover rounded-lg border border-emerald-300 cursor-pointer mx-auto hover:scale-105 transition" title="Klik untuk perbesar" />`
+                : `<span class="text-[11px] text-red-500 font-semibold">Belum Ada</span>`}
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap space-y-1">
+              <div>${getStatusBadge(item.status)}</div>
+              <div><span class="inline-block px-2 py-0.5 rounded-full text-[11px] border ${ew.badgeClass}">${ew.label}</span></div>
+            </td>
+            <td class="py-3 px-4 text-right whitespace-nowrap space-x-1">
+              ${canEdit ? `
+                <button onclick="openPunchModal('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold" title="Edit / Update Progres">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              ` : ''}
+              ${isMgmt ? `
+                <button onclick="deletePunchItem('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-semibold" title="Hapus Item">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              ` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderEarlyWarningCards(items) {
+      const container = document.getElementById('ew-cards-grid');
+      // Sort unfinished warnings first
+      const sorted = [...items].sort((a, b) => {
+        const score = (z) => z === 'red' ? 0 : z === 'orange' ? 1 : z === 'yellow' ? 2 : 3;
+        return score(evaluateEarlyWarning(a).zone) - score(evaluateEarlyWarning(b).zone);
+      });
+
+      container.innerHTML = sorted.map(item => {
+        const ew = evaluateEarlyWarning(item);
+        const borderMap = {
+          red: 'border-red-300 bg-red-50/40',
+          orange: 'border-orange-300 bg-orange-50/40',
+          yellow: 'border-amber-300 bg-amber-50/40',
+          green: 'border-emerald-200 bg-white'
+        };
+        return `
+          <div class="p-4 rounded-2xl border ${borderMap[ew.zone]} shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-xs font-extrabold text-slate-800">${item.id} • PIC: ${item.pic}</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] border ${ew.badgeClass}">${ew.label}</span>
+              </div>
+              <h4 class="text-sm font-bold text-slate-900">${item.title}</h4>
+              <p class="text-xs text-slate-600 mt-1 line-clamp-2">${item.description}</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs">
+              <span class="text-slate-500">Target: <strong>${formatIndoDate(item.dueDate)}</strong></span>
+              <button onclick="openPunchModal('${item.id}')" class="text-blue-600 hover:text-blue-800 font-bold">
+                Tindak Lanjuti →
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderReportTable() {
+      const filter = document.getElementById('report-filter-status')?.value || 'ALL';
+      const items = appState.punchLists.filter(item => {
+        if (filter === 'Verified/Closed') return item.status === 'Verified/Closed';
+        if (filter === 'UNFINISHED') return item.status !== 'Verified/Closed';
+        return true;
+      });
+
+      const verifiedTotal = appState.punchLists.filter(i => i.status === 'Verified/Closed').length;
+      document.getElementById('report-summary-badge').textContent = `${verifiedTotal} / ${appState.punchLists.length} Item Verified/Closed`;
+
+      const tbody = document.getElementById('report-table-body');
+      tbody.innerHTML = items.map((item, idx) => `
+        <tr>
+          <td class="py-2.5 px-3 border border-slate-300 text-center font-bold">${item.no || idx + 1}</td>
+          <td class="py-2.5 px-3 border border-slate-300 font-bold text-slate-900">${item.title}</td>
+          <td class="py-2.5 px-3 border border-slate-300 text-slate-700 leading-snug">${item.description}</td>
+          <td class="py-2.5 px-3 border border-slate-300 font-semibold text-slate-800">${item.pic}</td>
+          <td class="py-2.5 px-3 border border-slate-300 whitespace-nowrap">${formatIndoDate(item.foundDate)}</td>
+          <td class="py-2.5 px-3 border border-slate-300 text-center">
+            ${item.photoBefore
+              ? `<img src="${item.photoBefore}" alt="Before ${item.id}" class="w-24 h-16 object-cover rounded border border-slate-400 mx-auto" />`
+              : `<span class="text-[10px] text-slate-400 italic">-</span>`}
+          </td>
+          <td class="py-2.5 px-3 border border-slate-300 whitespace-nowrap">${formatIndoDate(item.completedDate || item.dueDate)}</td>
+          <td class="py-2.5 px-3 border border-slate-300 text-center">
+            ${item.photoAfter
+              ? `<img src="${item.photoAfter}" alt="After ${item.id}" class="w-24 h-16 object-cover rounded border border-slate-400 mx-auto" />`
+              : `<span class="text-[10px] text-red-500 font-semibold">Belum Ada</span>`}
+          </td>
+          <td class="py-2.5 px-3 border border-slate-300 text-center font-bold ${item.status === 'Verified/Closed' ? 'text-emerald-700' : 'text-amber-700'}">
+            ${item.status}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('users-table-body');
+      tbody.innerHTML = appState.users.map(u => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-3 px-4 font-bold text-slate-800">${u.name}</td>
+          <td class="py-3 px-4 text-xs font-mono text-slate-600">${u.email}</td>
+          <td class="py-3 px-4">
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${u.role === 'mgmt' ? 'bg-blue-100 text-blue-800' : 'bg-teal-100 text-teal-800'}">
+              ${u.role === 'mgmt' ? 'Manajemen Kontraktor Utama' : 'Tim Pemeliharaan Lapangan (PIC)'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-xs text-slate-600">${u.title || '-'}</td>
+          <td class="py-3 px-4 text-xs font-mono text-slate-500">${u.password}</td>
+          <td class="py-3 px-4 text-right whitespace-nowrap space-x-1">
+            <button onclick="openUserModal('${u.id}')" class="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold">
+              <i class="fa-solid fa-user-pen mr-1"></i> Edit
+            </button>
+            <button onclick="deleteUser('${u.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function populatePicDropdowns() {
+      const picUsers = appState.users.filter(u => u.role === 'pic');
+      const picNames = picUsers.length > 0 ? picUsers.map(u => u.name) : ['Anton', 'Adul', 'Budi', 'Ali'];
+
+      const pmPicSelect = document.getElementById('pm-pic');
+      if (pmPicSelect) {
+        pmPicSelect.innerHTML = picNames.map(name => `<option value="${name}">${name}</option>`).join('');
+      }
+
+      const filterPicSelect = document.getElementById('filter-pic');
+      if (filterPicSelect) {
+        const currentVal = filterPicSelect.value;
+        filterPicSelect.innerHTML = `<option value="ALL">Semua PIC</option>` +
+          picNames.map(name => `<option value="${name}">${name}</option>`).join('');
+        filterPicSelect.value = currentVal || 'ALL';
+      }
+    }
+
+    // =========================================================================
+    // 8. CRUD PUNCH LIST, VALIDASI POKA-YOKE & KOMPRESI FOTO CANVAS
+    // =========================================================================
+    function openPunchModal(itemId = null) {
+      const isMgmt = appState.currentUser && appState.currentUser.role === 'mgmt';
+      const statusSelect = document.getElementById('pm-status');
+
+      // Restrict Verified/Closed option to Manajemen only
+      Array.from(statusSelect.options).forEach(opt => {
+        if (opt.value === 'Verified/Closed') {
+          opt.disabled = !isMgmt;
+        }
+      });
+
+      document.getElementById('pokayoke-warning').classList.add('hidden');
+
+      if (itemId) {
+        const item = appState.punchLists.find(i => i.id === itemId);
+        if (!item) return;
+
+        document.getElementById('punch-modal-title').textContent = `Edit & Pembaruan Progres — ${item.id}`;
+        document.getElementById('pm-id').value = item.id;
+        document.getElementById('pm-ticket').value = item.id;
+        document.getElementById('pm-pic').value = item.pic;
+        document.getElementById('pm-priority').value = item.priority || 'High';
+        document.getElementById('pm-title').value = item.title;
+        document.getElementById('pm-desc').value = item.description;
+        document.getElementById('pm-found-date').value = item.foundDate;
+        document.getElementById('pm-due-date').value = item.dueDate;
+        document.getElementById('pm-completed-date').value = item.completedDate || '';
+        document.getElementById('pm-status').value = item.status;
+        document.getElementById('pm-remarks').value = item.remarks || '';
+
+        appState.tempBeforePhoto = item.photoBefore || '';
+        appState.tempAfterPhoto = item.photoAfter || '';
+
+        // Lock master fields if role is PIC
+        ['pm-title', 'pm-desc', 'pm-pic', 'pm-priority', 'pm-found-date', 'pm-due-date'].forEach(fid => {
+          document.getElementById(fid).readOnly = !isMgmt;
+          if (document.getElementById(fid).tagName === 'SELECT') {
+            document.getElementById(fid).disabled = !isMgmt;
+          }
+        });
+      } else {
+        const nextNum = appState.punchLists.length + 1;
+        const nextTicket = `PL-${String(nextNum).padStart(3, '0')}`;
+        document.getElementById('punch-modal-title').textContent = 'Input Temuan Punch List Baru';
+        document.getElementById('pm-id').value = '';
+        document.getElementById('pm-ticket').value = nextTicket;
+        document.getElementById('pm-priority').value = 'High';
+        document.getElementById('pm-title').value = '';
+        document.getElementById('pm-desc').value = '';
+        document.getElementById('pm-found-date').value = '2026-11-21';
+        document.getElementById('pm-due-date').value = '2026-11-28';
+        document.getElementById('pm-completed-date').value = '';
+        document.getElementById('pm-status').value = 'Open';
+        document.getElementById('pm-remarks').value = '';
+
+        appState.tempBeforePhoto = '';
+        appState.tempAfterPhoto = '';
+
+        ['pm-title', 'pm-desc', 'pm-pic', 'pm-priority', 'pm-found-date', 'pm-due-date'].forEach(fid => {
+          document.getElementById(fid).readOnly = false;
+          if (document.getElementById(fid).tagName === 'SELECT') {
+            document.getElementById(fid).disabled = false;
+          }
+        });
+      }
+
+      updatePhotoPreviews();
+      openModal('punch-modal');
+    }
+
+    function updatePhotoPreviews() {
+      const bImg = document.getElementById('preview-before');
+      const bPh = document.getElementById('placeholder-before');
+      if (appState.tempBeforePhoto) {
+        bImg.src = appState.tempBeforePhoto;
+        bImg.classList.remove('hidden');
+        bPh.classList.add('hidden');
+      } else {
+        bImg.classList.add('hidden');
+        bPh.classList.remove('hidden');
+      }
+
+      const aImg = document.getElementById('preview-after');
+      const aPh = document.getElementById('placeholder-after');
+      if (appState.tempAfterPhoto) {
+        aImg.src = appState.tempAfterPhoto;
+        aImg.classList.remove('hidden');
+        aPh.classList.add('hidden');
+      } else {
+        aImg.classList.add('hidden');
+        aPh.classList.remove('hidden');
+      }
+    }
+
+    function clearPhoto(slot) {
+      if (slot === 'before') appState.tempBeforePhoto = '';
+      if (slot === 'after') appState.tempAfterPhoto = '';
+      updatePhotoPreviews();
+    }
+
+    // Compress uploaded camera/gallery photo via Canvas so it syncs fast in Firebase RTDB
+    function handlePhotoUpload(event, slot) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          const canvas = document.createElement('canvas');
+          const maxDim = 480;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+
+          // Add timestamp watermark
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(0, h - 22, w, 22);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillText(`${slot.toUpperCase()} • ${new Date().toLocaleDateString('id-ID')}`, 8, h - 7);
+
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+          if (slot === 'before') appState.tempBeforePhoto = compressedDataUrl;
+          if (slot === 'after') appState.tempAfterPhoto = compressedDataUrl;
+          updatePhotoPreviews();
+          document.getElementById('pokayoke-warning').classList.add('hidden');
+          showToast(`Foto ${slot.toUpperCase()} berhasil diunggah & dikompresi.`, 'success');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleStatusSelectChange() {
+      const status = document.getElementById('pm-status').value;
+      const warnBox = document.getElementById('pokayoke-warning');
+      const warnMsg = document.getElementById('pokayoke-msg');
+
+      if ((status === 'Completed' || status === 'Verified/Closed') && !appState.tempAfterPhoto) {
+        warnBox.classList.remove('hidden');
+        warnMsg.textContent = 'Validasi Poka-Yoke: Status Completed / Verified wajib melampirkan Foto Sesudah Perbaikan (After)!';
+      } else if (status === 'Pending' && !document.getElementById('pm-remarks').value.trim()) {
+        warnBox.classList.remove('hidden');
+        warnMsg.textContent = 'Aturan SOP: Status Pending wajib menyertakan alasan kendala pada kolom Catatan Lapangan.';
+      } else {
+        warnBox.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('punch-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const existingId = document.getElementById('pm-id').value;
+      const ticket = document.getElementById('pm-ticket').value;
+      const status = document.getElementById('pm-status').value;
+      const remarks = document.getElementById('pm-remarks').value.trim();
+
+      // POKA-YOKE VALIDATION (Bab III Section 3.2.2)
+      if ((status === 'Completed' || status === 'Verified/Closed') && !appState.tempAfterPhoto) {
+        const warnBox = document.getElementById('pokayoke-warning');
+        warnBox.classList.remove('hidden');
+        document.getElementById('pokayoke-msg').textContent = 'DITOLAK (Poka-Yoke): Anda wajib mengunggah Foto Sesudah Perbaikan (After) terlebih dahulu sebelum menutup item!';
+        return;
+      }
+
+      if (status === 'Pending' && !remarks) {
+        const warnBox = document.getElementById('pokayoke-warning');
+        warnBox.classList.remove('hidden');
+        document.getElementById('pokayoke-msg').textContent = 'DITOLAK (SOP): Harap isi alasan penundaan pada kolom Catatan Lapangan untuk status Pending.';
+        return;
+      }
+
+      let completedDate = document.getElementById('pm-completed-date').value;
+      if ((status === 'Completed' || status === 'Verified/Closed') && !completedDate) {
+        completedDate = '2026-11-21';
+      }
+
+      const payload = {
+        id: existingId || ticket,
+        no: existingId
+          ? (appState.punchLists.find(i => i.id === existingId)?.no || appState.punchLists.length + 1)
+          : appState.punchLists.length + 1,
+        title: document.getElementById('pm-title').value.trim(),
+        description: document.getElementById('pm-desc').value.trim(),
+        pic: document.getElementById('pm-pic').value,
+        priority: document.getElementById('pm-priority').value,
+        foundDate: document.getElementById('pm-found-date').value,
+        dueDate: document.getElementById('pm-due-date').value,
+        completedDate: completedDate,
+        status: status,
+        remarks: remarks,
+        photoBefore: appState.tempBeforePhoto,
+        photoAfter: appState.tempAfterPhoto
+      };
+
+      if (existingId) {
+        const idx = appState.punchLists.findIndex(i => i.id === existingId);
+        if (idx !== -1) appState.punchLists[idx] = payload;
+      } else {
+        appState.punchLists.push(payload);
+      }
+
+      syncAllToStorageAndCloud();
+      renderAll();
+      closeModal('punch-modal');
+      showToast(`Item ${payload.id} berhasil disimpan & disinkronkan secara real-time!`, 'success');
+    });
+
+    function deletePunchItem(itemId) {
+      appState.punchLists = appState.punchLists.filter(i => i.id !== itemId);
+      appState.punchLists.forEach((item, idx) => { item.no = idx + 1; });
+      syncAllToStorageAndCloud();
+      renderAll();
+      showToast(`Item ${itemId} telah dihapus.`, 'info');
+    }
+
+    function resetDefaultDataset() {
+      appState.punchLists = buildDefaultPunchLists();
+      syncAllToStorageAndCloud();
+      renderAll();
+      showToast('15 Data Studi Kasus Bab I berhasil dimuat ulang!', 'success');
+    }
+
+    // =========================================================================
+    // 9. PHOTO COMPARISON & QUICK VERIFY MODAL
+    // =========================================================================
+    function openPhotoCompare(itemId) {
+      const item = appState.punchLists.find(i => i.id === itemId);
+      if (!item) return;
+
+      document.getElementById('photo-modal-title').textContent = `Dokumentasi ${item.id} — ${item.title}`;
+      document.getElementById('photo-modal-meta').textContent = `PIC: ${item.pic} • Temuan: ${formatIndoDate(item.foundDate)} • Status: ${item.status}`;
+      document.getElementById('vm-desc').textContent = item.description;
+
+      const bImg = document.getElementById('vm-before-img');
+      const bEmp = document.getElementById('vm-before-empty');
+      if (item.photoBefore) {
+        bImg.src = item.photoBefore;
+        bImg.classList.remove('hidden');
+        bEmp.classList.add('hidden');
+      } else {
+        bImg.classList.add('hidden');
+        bEmp.classList.remove('hidden');
+      }
+
+      const aImg = document.getElementById('vm-after-img');
+      const aEmp = document.getElementById('vm-after-empty');
+      if (item.photoAfter) {
+        aImg.src = item.photoAfter;
+        aImg.classList.remove('hidden');
+        aEmp.classList.add('hidden');
+      } else {
+        aImg.classList.add('hidden');
+        aEmp.classList.remove('hidden');
+      }
+
+      document.getElementById('vm-btn-edit').onclick = () => {
+        closeModal('photo-modal');
+        openPunchModal(item.id);
+      };
+
+      const verifyBtn = document.getElementById('vm-btn-verify');
+      const isMgmt = appState.currentUser && appState.currentUser.role === 'mgmt';
+      if (isMgmt && item.status !== 'Verified/Closed' && item.photoAfter) {
+        verifyBtn.classList.remove('hidden');
+        verifyBtn.onclick = () => {
+          item.status = 'Verified/Closed';
+          if (!item.completedDate) item.completedDate = '2026-11-21';
+          syncAllToStorageAndCloud();
+          renderAll();
+          closeModal('photo-modal');
+          showToast(`Item ${item.id} resmi disetujui: Verified/Closed!`, 'success');
+        };
+      } else {
+        verifyBtn.classList.add('hidden');
+      }
+
+      openModal('photo-modal');
+    }
+
+    // =========================================================================
+    // 10. USER MANAGEMENT CRUD (EDITABLE USERS REAL-TIME)
+    // =========================================================================
+    function openUserModal(userId = null) {
+      if (userId) {
+        const u = appState.users.find(x => x.id === userId);
+        if (!u) return;
+        document.getElementById('user-modal-title').textContent = `Edit Profil Pengguna — ${u.name}`;
+        document.getElementById('um-id').value = u.id;
+        document.getElementById('um-name').value = u.name;
+        document.getElementById('um-email').value = u.email;
+        document.getElementById('um-role').value = u.role;
+        document.getElementById('um-title').value = u.title || '';
+        document.getElementById('um-password').value = u.password;
+      } else {
+        document.getElementById('user-modal-title').textContent = 'Tambah Pengguna Baru';
+        document.getElementById('um-id').value = '';
+        document.getElementById('um-name').value = '';
+        document.getElementById('um-email').value = '';
+        document.getElementById('um-role').value = 'pic';
+        document.getElementById('um-title').value = '';
+        document.getElementById('um-password').value = '123';
+      }
+      openModal('user-modal');
+    }
+
+    document.getElementById('user-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const id = document.getElementById('um-id').value;
+      const name = document.getElementById('um-name').value.trim();
+      const email = document.getElementById('um-email').value.trim();
+      const role = document.getElementById('um-role').value;
+      const title = document.getElementById('um-title').value.trim();
+      const password = document.getElementById('um-password').value.trim();
+
+      if (id) {
+        const idx = appState.users.findIndex(u => u.id === id);
+        if (idx !== -1) {
+          const oldName = appState.users[idx].name;
+          appState.users[idx] = { id, name, email, role, title, password };
+          // Update PIC name in punchLists if renamed
+          if (oldName !== name) {
+            appState.punchLists.forEach(item => {
+              if (item.pic === oldName) item.pic = name;
+            });
+          }
+          // Update active session if editing self
+          if (appState.currentUser && appState.currentUser.id === id) {
+            appState.currentUser = appState.users[idx];
+            sessionStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(appState.currentUser));
+            document.getElementById('sidebar-user-name').textContent = name;
+          }
+        }
+      } else {
+        appState.users.push({
+          id: 'u_' + Date.now(),
+          name, email, role, title, password
+        });
+      }
+
+      syncAllToStorageAndCloud();
+      populatePicDropdowns();
+      renderAll();
+      closeModal('user-modal');
+      showToast(`Data pengguna ${name} berhasil disimpan & disinkronkan!`, 'success');
+    });
+
+    function deleteUser(userId) {
+      if (appState.users.length <= 2) {
+        showToast('Minimal harus tersisa 2 akun pengguna aktif.', 'error');
+        return;
+      }
+      appState.users = appState.users.filter(u => u.id !== userId);
+      syncAllToStorageAndCloud();
+      populatePicDropdowns();
+      renderAll();
+      showToast('Akun pengguna berhasil dihapus.', 'info');
+    }
+
+    // =========================================================================
+    // 11. EXPORT CSV / EXCEL & HELPERS
+    // =========================================================================
+    function exportToCSV() {
+      const headers = ['No', 'No Tiket', 'Judul Catatan', 'Deskripsi', 'Nama PIC', 'Tanggal Temuan', 'Tanggal Selesai', 'Status', 'Foto Before', 'Foto After'];
+      const rows = appState.punchLists.map((item, idx) => [
+        item.no || idx + 1,
+        item.id,
+        `"${item.title.replace(/"/g, '""')}"`,
+        `"${item.description.replace(/"/g, '""')}"`,
+        `"${item.pic}"`,
+        item.foundDate,
+        item.completedDate || item.dueDate,
+        item.status,
+        item.photoBefore ? 'Tersedia' : 'Kosong',
+        item.photoAfter ? 'Tersedia' : 'Belum Ada'
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'Laporan_PunchList_Kelompok4_UNPAM.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('File rekapitulasi CSV/Excel berhasil diunduh!', 'success');
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        success: 'bg-emerald-900 border-emerald-500 text-white',
+        error: 'bg-red-900 border-red-500 text-white',
+        info: 'bg-slate-900 border-blue-500 text-white'
+      };
+      const icons = {
+        success: 'fa-circle-check text-emerald-400',
+        error: 'fa-circle-exclamation text-red-400',
+        info: 'fa-circle-info text-blue-400'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto p-3.5 rounded-xl border-l-4 shadow-xl text-xs font-medium flex items-center gap-2.5 transition-all duration-300 ${colors[type] || colors.info}`;
+      toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} text-base"></i><span>${message}</span>`;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(16px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    window.onload = function () {
+      initApp();
+    };
+  </script>
+</body>
+</html>
